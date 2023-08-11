@@ -1,6 +1,7 @@
 import httpx
 import xmltodict
-from . import CCM15DeviceState
+from .CCM15DeviceState import CCM15DeviceState
+from .CCM15SlaveDevice import CCM15SlaveDevice
 
 BASE_URL = "http://{0}:{1}/{2}"
 CONF_URL_STATUS = "status.xml"
@@ -11,7 +12,6 @@ class CCM15Device:
         self.host = host
         self.port = port
         self.timeout = timeout
-        self._ac_devices = {}
 
     async def _fetch_xml_data(self) -> str:
         url = BASE_URL.format(self.host, self.port, CONF_URL_STATUS)
@@ -33,9 +33,6 @@ class CCM15Device:
             ac_slave = CCM15SlaveDevice(bytesarr)
             ac_data.devices[ac_index] = ac_slave
             ac_index += 1
-        if len(self._ac_devices) == 0:
-            for ac_index in ac_data.devices:
-                self._ac_devices[ac_index] = CCM15Climate(self.host, ac_index, self)
         return ac_data
 
     async def get_status_async(self) -> CCM15DeviceState:

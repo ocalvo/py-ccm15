@@ -2,18 +2,18 @@ import unittest
 from unittest.mock import patch, MagicMock
 from ccm15 import CCM15Device, CCM15DeviceState, CCM15SlaveDevice
 
-class TestCCM15(unittest.TestCase):
+class TestCCM15(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.ccm = CCM15Device("localhost", 8000)
 
-    @patch("ccm15.httpx.AsyncClient.get")
-    async def test_get_status_async(self, mock_get):
+    @patch("httpx.AsyncClient.get")
+    async def test_get_status_async(self, mock_get) -> None:
         # Set up mock response
         mock_response = MagicMock()
         mock_response.text = """
         <response>
-            <ac1>01020304</ac1>
-            <ac2>05060708</ac2>
+            <ac1>00000001020304</ac1>
+            <ac2>00000005060708</ac2>
         </response>
         """
         mock_get.return_value = mock_response
