@@ -41,7 +41,7 @@ class CCM15Device:
 
     async def async_test_connection(self):  # pragma: no cover
         """Test the connection to the CCM15 device."""
-        url = f"http://{self._host}:{self._port}/{CONF_URL_STATUS}"
+        url = f"http://{self.host}:{self.port}/{CONF_URL_STATUS}"
         try:
             async with aiohttp.ClientSession() as session, session.get(
                 url, self.timeout
