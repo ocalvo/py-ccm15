@@ -5,6 +5,7 @@ from .CCM15SlaveDevice import CCM15SlaveDevice
 
 BASE_URL = "http://{0}:{1}/{2}"
 CONF_URL_STATUS = "status.xml"
+CONF_URL_CTRL = "ctrl.xml"
 DEFAULT_TIMEOUT = 10
 
 class CCM15Device:
@@ -38,4 +39,41 @@ class CCM15Device:
     async def get_status_async(self) -> CCM15DeviceState:
         return await self._fetch_data()
 
+    async def async_test_connection(self):  # pragma: no cover
+        """Test the connection to the CCM15 device."""
+        url = f"http://{self._host}:{self._port}/{CONF_URL_STATUS}"
+        try:
+            async with aiohttp.ClientSession() as session, session.get(
+                url, self.timeout
+            ) as response:
+                if response.status == 200:
+                    return True
+                return False
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            _LOGGER.debug("Test connection: Timeout")
+            return False
+
+    async def async_send_state(self, url: str) -> bool:  # pragma: no cover
+        """Send the url to set state to the ccm15 slave."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, self.timeout)
+            return response.status_code in (httpx.codes.OK, httpx.codes.FOUND)
+
+    async def async_set_state(self, ac_index: int, state: str, value: int) -> bool:
+        """Set new target states."""
+        ac_id: int = 2**ac_index
+        url = BASE_URL.format(
+            self.host,
+            self.port,
+            CONF_URL_CTRL
+            + "?ac0="
+            + str(ac_id)
+            + "&ac1=0"
+            + "&"
+            + state
+            + "="
+            + str(value),
+        )
+
+        return await self.async_send_state(url)
 
