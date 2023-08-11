@@ -3,20 +3,15 @@ from dataclasses import dataclass
 from enum import Enum
 
 @dataclass
-class TemperatureUnit(Enum):
-  CELSIUS = 1
-  FAHRENHEIT = 2
-
-@dataclass
 class CCM15SlaveDevice:
     """Data retrieved from a CCM15 slave device."""
 
     def __init__(self, bytesarr: bytes) -> None:
         """Initialize the slave device."""
-        self.unit = TemperatureUnit.CELSIUS
+        self.is_celsius = True
         buf = bytesarr[0]
         if (buf >> 0) & 1:
-            self.unit = TemperatureUnit.FAHRENHEIT
+            self.is_celsius = False
         self.locked_cool_temperature: int = (buf >> 3) & 0x1F
 
         buf = bytesarr[1]
@@ -36,7 +31,7 @@ class CCM15SlaveDevice:
 
         buf = bytesarr[4]
         self.temperature_setpoint: int = (buf >> 3) & 0x1F
-        if self.unit == TemperatureUnit.FAHRENHEIT:
+        if not self.is_celsius:
             self.temperature_setpoint += 62
             self.locked_cool_temperature += 62
             self.locked_heat_temperature += 62

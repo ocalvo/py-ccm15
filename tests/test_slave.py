@@ -1,5 +1,5 @@
 import unittest
-from ccm15 import CCM15SlaveDevice, TemperatureUnit
+from ccm15 import CCM15SlaveDevice
 
 class TestCCM15SlaveDevice(unittest.TestCase):
     def test_swing_mode_on(self) -> None:
@@ -27,7 +27,7 @@ class TestCCM15SlaveDevice(unittest.TestCase):
 
         data = bytearray.fromhex("81000041d2001a")
         device = CCM15SlaveDevice(data)
-        self.assertEqual(TemperatureUnit.FAHRENHEIT, device.unit)
+        self.assertEqual(False, device.is_celsius)
         self.assertEqual(88, device.temperature_setpoint)
         self.assertEqual(0, device.locked_cool_temperature)
         self.assertEqual(0, device.locked_heat_temperature)
