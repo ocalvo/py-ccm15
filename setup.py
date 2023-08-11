@@ -17,5 +17,9 @@ setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
+    ],
+    install_requires=[
+        'httpx>=0.24.1',
+        'xmltodict>=0.13.0'
     ]
 )
