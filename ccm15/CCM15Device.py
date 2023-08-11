@@ -1,5 +1,7 @@
 import httpx
 import xmltodict
+import aiohttp
+import asyncio
 from .CCM15DeviceState import CCM15DeviceState
 from .CCM15SlaveDevice import CCM15SlaveDevice
 
@@ -44,13 +46,12 @@ class CCM15Device:
         url = f"http://{self.host}:{self.port}/{CONF_URL_STATUS}"
         try:
             async with aiohttp.ClientSession() as session, session.get(
-                url, self.timeout
+                url, timeout = self.timeout
             ) as response:
                 if response.status == 200:
                     return True
                 return False
         except (aiohttp.ClientError, asyncio.TimeoutError):
-            _LOGGER.debug("Test connection: Timeout")
             return False
 
     async def async_send_state(self, url: str) -> bool:  # pragma: no cover

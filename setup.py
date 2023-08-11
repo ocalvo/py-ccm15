@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setup(
     name="py-ccm15",
-    version="0.0.7",
+    version="0.0.8",
     author="Oscar Calvo",
     author_email="oscar@calvonet.com",
     description="A package to control Midea CCM15 data converter modules",
@@ -20,6 +20,7 @@ setup(
     ],
     install_requires=[
         'httpx>=0.24.1',
-        'xmltodict>=0.13.0'
+        'xmltodict>=0.13.0',
+        'aiohttp>=3.8.5'
     ]
 )
