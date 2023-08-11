@@ -25,5 +25,16 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(state.devices[0], CCM15SlaveDevice)
         self.assertIsInstance(state.devices[1], CCM15SlaveDevice)
 
+    @patch("httpx.AsyncClient.get")
+    async def test_async_set_state(self, mock_get):
+        # Set up mock response
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        # Call method and check result
+        result = await self.ccm.async_set_state(0, "state", 1)
+        self.assertTrue(result)
+
 if __name__ == "__main__":
     unittest.main()
