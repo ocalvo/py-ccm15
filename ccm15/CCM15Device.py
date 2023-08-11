@@ -17,7 +17,7 @@ class CCM15Device:
     async def _fetch_xml_data(self) -> str:
         url = BASE_URL.format(self.host, self.port, CONF_URL_STATUS)
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, self.timeout)
+            response = await client.get(url, timeout=self.timeout)
         return response.text
 
     async def _fetch_data(self) -> CCM15DeviceState:
