@@ -57,7 +57,7 @@ class CCM15Device:
     async def async_send_state(self, url: str) -> bool:  # pragma: no cover
         """Send the url to set state to the ccm15 slave."""
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, self.timeout)
+            response = await client.get(url, timeout = self.timeout)
             return response.status_code in (httpx.codes.OK, httpx.codes.FOUND)
 
     async def async_set_state(self, ac_index: int, state: str, value: int) -> bool:
