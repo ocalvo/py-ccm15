@@ -31,7 +31,8 @@ class CCM15Device:
         ac_index = 0
         for ac_name, ac_binary in data.items():
             if ac_binary == "-":
-                break
+                ac_index += 1
+                continue
             bytesarr = bytes.fromhex(ac_binary.strip(","))
             ac_slave = CCM15SlaveDevice(bytesarr)
             ac_data.devices[ac_index] = ac_slave
