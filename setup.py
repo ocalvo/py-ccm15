@@ -4,8 +4,8 @@ with open("README.md", "r") as f:
     long_description = f.read()
 
 setup(
-    name="py-ccm15",
-    version="0.1.0",
+    name="py_ccm15",
+    version="0.1.1",
     author="Oscar Calvo",
     author_email="oscar@calvonet.com",
     description="A package to control Midea CCM15 data converter modules",
