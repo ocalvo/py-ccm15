@@ -60,7 +60,7 @@ class CCM15Device:
             response = await client.get(url, timeout = self.timeout)
             return response.status_code in (httpx.codes.OK, httpx.codes.FOUND)
 
-    async def async_set_state(self, ac_index: int, state: str, value: int) -> bool:
+    async def async_set_state(self, ac_index: int, data) -> bool:
         """Set new target states."""
         ac_id: int = 2**ac_index
         url = BASE_URL.format(
@@ -70,10 +70,9 @@ class CCM15Device:
             + "?ac0="
             + str(ac_id)
             + "&ac1=0"
-            + "&"
-            + state
-            + "="
-            + str(value),
+            + "&mode=" + str(data.ac_mode)
+            +  "&fan=" + str(data.fan_mode)
+            + "&temp=" + str(data.temperature_setpoint)
         )
 
         return await self.async_send_state(url)
