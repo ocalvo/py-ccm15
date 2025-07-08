@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "py_ccm15"
+version = "0.1.0"
+description = "A package to control Midea CCM15 data converter modules"
+readme = "README.md"
+license = "MIT"
+authors = [
+  { name = "Oscar Calvo", email = "oscar@calvonet.com" }
+]
+dependencies = [
+    "httpx>=0.24.1",
+    "xmltodict>=0.13.0",
+    "aiohttp>=3.8.5"
+]
+requires-python = ">=3.7"
+keywords = ["Midea", "CCM15", "data converter"]
+license-files = ["LICENSE"]
+
+
+[project.urls]
+Homepage = "https://github.com/ocalvo/py-ccm15"
+
