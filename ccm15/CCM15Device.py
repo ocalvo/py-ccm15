@@ -23,19 +23,31 @@ class CCM15Device:
         return response.text
 
     async def _fetch_data(self) -> CCM15DeviceState:
-        """Get the current status of all AC devices."""
+        """Get the current status of all AC devices.
+
+        Slot numbers in the status.xml response are not guaranteed to be
+        contiguous (CCM15 can have empty slots before/between active units,
+        e.g. slaves 0-3 absent, 4-21 present). Use `continue` to skip empty
+        slots, and derive the device index from the XML key so the slot
+        number is preserved end-to-end and `async_set_state` builds the
+        correct slave bitmask.
+        """
         str_data = await self._fetch_xml_data()
         doc = xmltodict.parse(str_data)
         data = doc["response"]
         ac_data = CCM15DeviceState(devices={})
-        ac_index = 0
         for ac_name, ac_binary in data.items():
             if ac_binary == "-":
-                break
-            bytesarr = bytes.fromhex(ac_binary.strip(","))
-            ac_slave = CCM15SlaveDevice(bytesarr)
-            ac_data.devices[ac_index] = ac_slave
-            ac_index += 1
+                continue
+            try:
+                ac_index = int(str(ac_name).lstrip("aA"))
+            except ValueError:
+                continue
+            try:
+                bytesarr = bytes.fromhex(str(ac_binary).strip(","))
+            except ValueError:
+                continue
+            ac_data.devices[ac_index] = CCM15SlaveDevice(bytesarr)
         return ac_data
 
     async def get_status_async(self) -> CCM15DeviceState:
@@ -61,19 +73,29 @@ class CCM15Device:
             return response.status_code in (httpx.codes.OK, httpx.codes.FOUND)
 
     async def async_set_state(self, ac_index: int, data) -> bool:
-        """Set new target states."""
-        ac_id: int = 2**ac_index
+        """Set new target states.
+
+        Route the slave bitmask to ac0 for slots 0-31 and ac1 for slots
+        32-63. Previously all bits were placed in ac0, which silently
+        overflowed for slave indices >= 32.
+        """
+        if ac_index < 32:
+            ac0 = 2 ** ac_index
+            ac1 = 0
+        else:
+            ac0 = 0
+            ac1 = 2 ** (ac_index - 32)
         url = BASE_URL.format(
             self.host,
             self.port,
             CONF_URL_CTRL
             + "?ac0="
-            + str(ac_id)
-            + "&ac1=0"
+            + str(ac0)
+            + "&ac1="
+            + str(ac1)
             + "&mode=" + str(data.ac_mode)
             +  "&fan=" + str(data.fan_mode)
             + "&temp=" + str(data.temperature_setpoint)
         )
 
         return await self.async_send_state(url)
-
