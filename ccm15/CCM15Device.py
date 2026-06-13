@@ -41,7 +41,7 @@ class CCM15Device:
     async def get_status_async(self) -> CCM15DeviceState:
         return await self._fetch_data()
 
-    async def async_test_connection(self):  # pragma: no cover
+    async def async_test_connection(self):
         """Test the connection to the CCM15 device."""
         url = f"http://{self.host}:{self.port}/{CONF_URL_STATUS}"
         try:
@@ -54,7 +54,7 @@ class CCM15Device:
         except (aiohttp.ClientError, asyncio.TimeoutError):
             return False
 
-    async def async_send_state(self, url: str) -> bool:  # pragma: no cover
+    async def async_send_state(self, url: str) -> bool:
         """Send the url to set state to the ccm15 slave."""
         async with httpx.AsyncClient() as client:
             response = await client.get(url, timeout = self.timeout)
