@@ -5,6 +5,7 @@ import httpx
 import xmltodict
 from .CCM15DeviceState import CCM15DeviceState
 from .CCM15SlaveDevice import CCM15SlaveDevice
+from .TriState import TriState
 
 BASE_URL = "http://{0}:{1}/{2}"
 CONF_URL_STATUS = "status.xml"
@@ -187,5 +188,11 @@ class CCM15Device:
             +  "&fan=" + str(data.fan_mode)
             + "&temp=" + str(data.temperature_setpoint)
         )
+        # Opt-in swing: only emit `sw` when the caller set a desired value.
+        # UNSET (the default) leaves the command byte-for-byte unchanged, so
+        # firmware that does not accept `sw` is unaffected.
+        desired_swing = getattr(data, "desired_swing", TriState.UNSET)
+        if isinstance(desired_swing, TriState) and desired_swing.is_set:
+            url += "&sw=" + str(desired_swing.value)
 
         return await self.async_send_state(url)
