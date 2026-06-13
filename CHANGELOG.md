@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/ocalvo/py-ccm15/compare/v0.2.4...v0.3.0) (2026-06-13)
+
+
+### Features
+
+* accept an injected httpx.AsyncClient and manage its lifecycle ([#40](https://github.com/ocalvo/py-ccm15/issues/40)) ([dc145c2](https://github.com/ocalvo/py-ccm15/commit/dc145c29232d7d5b80d107b2e49583c0b319632b))
+
 ## [0.2.4](https://github.com/ocalvo/py-ccm15/compare/v0.2.3...v0.2.4) (2026-06-13)
 
 
