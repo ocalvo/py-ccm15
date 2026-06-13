@@ -23,17 +23,31 @@ pip install py-ccm15
 
 ```python
 import asyncio
-from py_ccm15 import CCM15Client
+from ccm15 import CCM15Device
 
 async def main():
-    client = CCM15Client(host="192.168.1.100", token="your_token_here")
-    status = await client.get_status()
-    print(status)
+    # host and port of the CCM15 gateway (default HTTP port is 80).
+    # Optionally pass password="123456" for firmwares that require it.
+    device = CCM15Device("192.168.1.100", 80)
 
-    await client.set_state(ac_mode="cool", fan_mode="auto", temperature=24)
+    # Read the state of every AC slave, keyed by its slot index.
+    state = await device.get_status_async()
+    for index, ac in state.devices.items():
+        print(index, ac.ac_mode, ac.fan_mode, ac.temperature, ac.temperature_setpoint)
+
+    # Change a slave: mutate its decoded state and write it back.
+    ac = state.devices[0]
+    ac.ac_mode = 0                 # mode code (0 = cool — see PROTOCOL.md)
+    ac.fan_mode = 0                # fan code (0 = auto)
+    ac.temperature_setpoint = 24
+    await device.async_set_state(0, ac)
 
 asyncio.run(main())
 ```
+
+> The importable package is `ccm15` (the PyPI distribution is `py-ccm15`). The
+> CCM15 uses no token; the only optional auth is a `password=` for firmwares
+> that require it. See [PROTOCOL.md](PROTOCOL.md) for the mode/fan codes.
 
 ## Requirements
 
