@@ -62,6 +62,37 @@ Rules:
 - **If a PR title doesn't match this grammar, release-please silently ignores
   it** and no release is cut.
 
+## Downstream consumer: Home Assistant core
+
+**This library is a published dependency of Home Assistant core.** The `ccm15`
+integration at `homeassistant/components/ccm15/` imports it directly:
+
+- `coordinator.py` constructs `CCM15Device(host, port, timeout)` and calls
+  `get_status_async()` and `async_set_state(ac_index, data)`.
+- `climate.py` reads `CCM15SlaveDevice` fields (`temperature`,
+  `temperature_setpoint`, `ac_mode`, `fan_mode`, `is_swing_on`, `error_code`).
+- The version is pinned in `manifest.json` (`requirements: ["py_ccm15==X.Y.Z"]`)
+  and mirrored into HA's generated `requirements_all.txt` /
+  `requirements_test_all.txt`. `@ocalvo` is the codeowner.
+
+Implications when changing this repo:
+
+- **The public API is a contract.** Renaming/removing `CCM15Device`,
+  `CCM15SlaveDevice`, `CCM15DeviceState`, their fields, or changing the
+  `async_set_state` / `get_status_async` signatures **breaks HA core**. Treat
+  such changes as `feat!`/`fix!` (major bump) and pair them with a
+  homeassistant/core PR.
+- **HA does not auto-upgrade.** Fixing a bug here only reaches HA users after a
+  release **and** a follow-up homeassistant/core PR bumping the pin in
+  `manifest.json` (target the `dev` branch). A fix sitting in a release nobody
+  bumped to is invisible to HA users — e.g. issues reported against the
+  integration may already be fixed in a newer release than HA pins.
+- **Behavior decoded here, commanded in HA.** `CCM15SlaveDevice` decodes raw
+  controller status; HA's `const.py` maps `HVACMode` <-> int command codes. A
+  mode/fan-encoding mismatch between status and command surfaces as wrong
+  behavior in HA (see issue #15), so keep the decode semantics stable and
+  documented.
+
 ## Versioning
 
 Do **not** hand-edit the version in `pyproject.toml` — release-please owns it.
