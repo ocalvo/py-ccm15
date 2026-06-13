@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/ocalvo/py-ccm15/compare/v0.2.1...v0.2.2) (2026-06-13)
+
+
+### Bug Fixes
+
+* handle non-contiguous slots and slaves &gt;= 32 ([#23](https://github.com/ocalvo/py-ccm15/issues/23)) ([d9d7e58](https://github.com/ocalvo/py-ccm15/commit/d9d7e5890d5cf3baf02adc4e28a1e5a3c2fdb80a))
+
 ## [0.2.1](https://github.com/ocalvo/py-ccm15/compare/v0.2.0...v0.2.1) (2026-06-13)
 
 
