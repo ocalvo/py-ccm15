@@ -4,6 +4,8 @@ Python Library to access a Midea CCM15 data converter
 
 This package provides an asynchronous interface to communicate with Midea CCM15 data converter modules. It allows you to control and monitor air conditioning units via the CCM15 gateway using Python.
 
+The CCM15 — officially the [**Midea CCM-15 Central Controller**](https://mbt.midea.com/global/hvac-goods/midea-products-category/vrfs/vrf-controller/central-controller-ccm-15) — is a data converter that bridges Midea's RS-485 VRF bus to TCP/IP, exposing a small HTTP interface for monitoring and control of up to 64 indoor units.
+
 ## Features
 
 - Read and set temperature
@@ -21,17 +23,31 @@ pip install py-ccm15
 
 ```python
 import asyncio
-from py_ccm15 import CCM15Client
+from ccm15 import CCM15Device
 
 async def main():
-    client = CCM15Client(host="192.168.1.100", token="your_token_here")
-    status = await client.get_status()
-    print(status)
+    # host and port of the CCM15 gateway (default HTTP port is 80).
+    # Optionally pass password="123456" for firmwares that require it.
+    device = CCM15Device("192.168.1.100", 80)
 
-    await client.set_state(ac_mode="cool", fan_mode="auto", temperature=24)
+    # Read the state of every AC slave, keyed by its slot index.
+    state = await device.get_status_async()
+    for index, ac in state.devices.items():
+        print(index, ac.ac_mode, ac.fan_mode, ac.temperature, ac.temperature_setpoint)
+
+    # Change a slave: mutate its decoded state and write it back.
+    ac = state.devices[0]
+    ac.ac_mode = 0                 # mode code (0 = cool — see PROTOCOL.md)
+    ac.fan_mode = 0                # fan code (0 = auto)
+    ac.temperature_setpoint = 24
+    await device.async_set_state(0, ac)
 
 asyncio.run(main())
 ```
+
+> The importable package is `ccm15` (the PyPI distribution is `py-ccm15`). The
+> CCM15 uses no token; the only optional auth is a `password=` for firmwares
+> that require it. See [PROTOCOL.md](PROTOCOL.md) for the mode/fan codes.
 
 ## Requirements
 
@@ -42,6 +58,20 @@ asyncio.run(main())
 ## Documentation
 
 For full API reference and advanced usage, visit the [GitHub repository](https://github.com/ocalvo/py-ccm15).
+
+## Protocol
+
+The CCM15's HTTP interface (`status.xml` / `ctrl.xml`) and the per-slave status
+byte layout are documented in detail in **[PROTOCOL.md](PROTOCOL.md)** — a
+bit-level reverse-engineering reference for the wire format, including the
+`ac0`/`ac1` slave mask, mode/fan codes, and the optional `pwd`/`sw`/`ht`
+parameters.
+
+## References
+
+- [Midea CCM-15 Central Controller — official product page](https://mbt.midea.com/global/hvac-goods/midea-products-category/vrfs/vrf-controller/central-controller-ccm-15)
+- [Home Assistant `ccm15` integration](https://www.home-assistant.io/integrations/ccm15/) — consumes this library
+- **Where to buy:** the CCM15 / CCM-15 data converter is often available cheaply on [AliExpress](https://www.aliexpress.com/wholesale?SearchText=Midea+CCM15) (search "Midea CCM15")
 
 ## Contributing
 
