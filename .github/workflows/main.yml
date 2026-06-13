@@ -1,9 +1,15 @@
-name: Build and Publish to PyPI
+name: Publish to PyPI (manual)
 
+# Automated publishing happens inside release-please.yml on every release-please
+# release. This workflow is a manual fallback for (re)publishing a specific tag
+# that was never published — e.g. a tag created before automated publishing was
+# wired into the release-please run.
 on:
-  push:
-    tags:
-      - 'v*'  # Triggers only on tags like v0.1.0, v1.0.1
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag or ref to build and publish (e.g. v0.2.2)'
+        required: true
 
 permissions:
   contents: read
@@ -16,6 +22,8 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.ref }}
 
     - name: Set up Python
       uses: actions/setup-python@v5
