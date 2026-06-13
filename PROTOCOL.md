@@ -178,7 +178,8 @@ being sent.
 | 4 | High |
 | 5 | Off |
 
-*(Code `1` is unused.)*
+*(Code `1` is unknown — not observed or documented; it is not mapped by any
+known implementation, so its meaning has not been confirmed.)*
 
 ---
 
