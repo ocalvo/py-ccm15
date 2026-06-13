@@ -4,6 +4,8 @@ Python Library to access a Midea CCM15 data converter
 
 This package provides an asynchronous interface to communicate with Midea CCM15 data converter modules. It allows you to control and monitor air conditioning units via the CCM15 gateway using Python.
 
+The CCM15 — officially the [**Midea CCM-15 Central Controller**](https://mbt.midea.com/global/hvac-goods/midea-products-category/vrfs/vrf-controller/central-controller-ccm-15) — is a data converter that bridges Midea's RS-485 VRF bus to TCP/IP, exposing a small HTTP interface for monitoring and control of up to 64 indoor units.
+
 ## Features
 
 - Read and set temperature
@@ -42,6 +44,20 @@ asyncio.run(main())
 ## Documentation
 
 For full API reference and advanced usage, visit the [GitHub repository](https://github.com/ocalvo/py-ccm15).
+
+## Protocol
+
+The CCM15's HTTP interface (`status.xml` / `ctrl.xml`) and the per-slave status
+byte layout are documented in detail in **[PROTOCOL.md](PROTOCOL.md)** — a
+bit-level reverse-engineering reference for the wire format, including the
+`ac0`/`ac1` slave mask, mode/fan codes, and the optional `pwd`/`sw`/`ht`
+parameters.
+
+## References
+
+- [Midea CCM-15 Central Controller — official product page](https://mbt.midea.com/global/hvac-goods/midea-products-category/vrfs/vrf-controller/central-controller-ccm-15)
+- [Home Assistant `ccm15` integration](https://www.home-assistant.io/integrations/ccm15/) — consumes this library
+- **Where to buy:** the CCM15 / CCM-15 data converter is often available cheaply on [AliExpress](https://www.aliexpress.com/wholesale?SearchText=Midea+CCM15) (search "Midea CCM15")
 
 ## Contributing
 
