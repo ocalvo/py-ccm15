@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 
 import httpx
 
-from ccm15 import CCM15Device, CCM15DeviceState, CCM15SlaveDevice
+from ccm15 import CCM15Device, CCM15DeviceState, CCM15SlaveDevice, TriState
 
 
 class TestCCM15(unittest.IsolatedAsyncioTestCase):
@@ -240,6 +240,65 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
             built = device._get_client()
             self.assertFalse(built.is_closed)
         self.assertTrue(built.is_closed)
+
+    @patch("httpx.AsyncClient.get")
+    async def test_set_state_omits_swing_by_default(self, mock_get):
+        """A freshly decoded device has desired_swing UNSET, so no sw is sent."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        data = CCM15SlaveDevice(bytes.fromhex("00000001020304"))
+        self.assertIs(data.desired_swing, TriState.UNSET)
+        await self.ccm.async_set_state(0, data)
+
+        called_url = mock_get.call_args.args[0]
+        self.assertNotIn("sw=", called_url)
+
+    @patch("httpx.AsyncClient.get")
+    async def test_set_state_sends_swing_on_when_desired(self, mock_get):
+        """Setting desired_swing=ON emits sw=1."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        data = CCM15SlaveDevice(bytes.fromhex("00000001020304"))
+        data.desired_swing = TriState.ON
+        await self.ccm.async_set_state(1, data)
+
+        called_url = mock_get.call_args.args[0]
+        self.assertIn("sw=1", called_url)
+
+    @patch("httpx.AsyncClient.get")
+    async def test_set_state_sends_swing_off_when_desired(self, mock_get):
+        """Setting desired_swing=OFF emits sw=0."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        data = CCM15SlaveDevice(bytes.fromhex("00000001020304"))
+        data.desired_swing = TriState.OFF
+        await self.ccm.async_set_state(0, data)
+
+        called_url = mock_get.call_args.args[0]
+        self.assertIn("sw=0", called_url)
+
+
+class TestTriState(unittest.TestCase):
+    def test_from_bool(self):
+        self.assertIs(TriState.from_bool(None), TriState.UNSET)
+        self.assertIs(TriState.from_bool(True), TriState.ON)
+        self.assertIs(TriState.from_bool(False), TriState.OFF)
+
+    def test_is_set(self):
+        self.assertFalse(TriState.UNSET.is_set)
+        self.assertTrue(TriState.ON.is_set)
+        self.assertTrue(TriState.OFF.is_set)
+
+    def test_values(self):
+        # Wire values: ON -> "1", OFF -> "0".
+        self.assertEqual(str(TriState.ON.value), "1")
+        self.assertEqual(str(TriState.OFF.value), "0")
 
 
 if __name__ == "__main__":
