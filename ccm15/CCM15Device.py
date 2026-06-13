@@ -15,10 +15,16 @@ DEFAULT_STATE_TTL = 300
 class CCM15Device:
     def __init__(self, host: str, port: int, timeout = DEFAULT_TIMEOUT,
                  state_ttl = DEFAULT_STATE_TTL,
-                 client: "httpx.AsyncClient | None" = None):
+                 client: "httpx.AsyncClient | None" = None,
+                 password: "str | None" = None):
         self.host = host
         self.port = port
         self.timeout = timeout
+        # Some CCM15 firmwares reject control commands unless a 6-digit
+        # password is included as a "pwd" query parameter. When set, it is
+        # prepended to every ctrl.xml URL the library builds; when left as
+        # None the URL is built without it.
+        self.password = password
         # The CCM15 is a flaky embedded bridge: status.xml periodically times
         # out or returns a degraded body (empty, or every slot "-") for up to a
         # minute at a time, even while every AC is online. Cache the last read
@@ -167,11 +173,13 @@ class CCM15Device:
         else:
             ac0 = 0
             ac1 = 2 ** (ac_index - 32)
+        pwd_part = f"pwd={self.password}&" if self.password else ""
         url = BASE_URL.format(
             self.host,
             self.port,
             CONF_URL_CTRL
-            + "?ac0="
+            + "?" + pwd_part
+            + "ac0="
             + str(ac0)
             + "&ac1="
             + str(ac1)
