@@ -3,8 +3,6 @@ from __future__ import annotations
 import time
 import httpx
 import xmltodict
-import aiohttp
-import asyncio
 from .CCM15DeviceState import CCM15DeviceState
 from .CCM15SlaveDevice import CCM15SlaveDevice
 
@@ -16,7 +14,8 @@ DEFAULT_STATE_TTL = 300
 
 class CCM15Device:
     def __init__(self, host: str, port: int, timeout = DEFAULT_TIMEOUT,
-                 state_ttl = DEFAULT_STATE_TTL):
+                 state_ttl = DEFAULT_STATE_TTL,
+                 client: "httpx.AsyncClient | None" = None):
         self.host = host
         self.port = port
         self.timeout = timeout
@@ -29,11 +28,42 @@ class CCM15Device:
         self.state_ttl = state_ttl
         self._last_state = None
         self._last_good_monotonic = None
+        # An httpx.AsyncClient can be passed in to avoid the library
+        # constructing one inside an asyncio loop. Constructing an
+        # AsyncClient synchronously loads the certifi CA bundle, which
+        # asyncio detects as a blocking I/O call. Callers running on an
+        # event loop (such as Home Assistant) should pass in a client that
+        # was built off the loop.
+        self._client = client
+        # Only a client we build ourselves is ours to close. An injected
+        # client is owned by the caller and must outlive this object, so
+        # aclose() must never touch it.
+        self._owns_client = client is None
+
+    def _get_client(self) -> httpx.AsyncClient:
+        if self._client is None:
+            self._client = httpx.AsyncClient()
+        return self._client
+
+    async def aclose(self) -> None:
+        """Close the httpx client, but only if this object created it.
+
+        An injected client is left untouched; its owner is responsible for
+        closing it. Safe to call more than once.
+        """
+        if self._client is not None and self._owns_client:
+            await self._client.aclose()
+            self._client = None
+
+    async def __aenter__(self) -> "CCM15Device":
+        return self
+
+    async def __aexit__(self, *exc_info) -> None:
+        await self.aclose()
 
     async def _fetch_xml_data(self) -> str:
         url = BASE_URL.format(self.host, self.port, CONF_URL_STATUS)
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout=self.timeout)
+        response = await self._get_client().get(url, timeout=self.timeout)
         return response.text
 
     async def _fetch_data(self) -> CCM15DeviceState:
@@ -108,24 +138,19 @@ class CCM15Device:
         cached = self._fresh_cached_state()
         return cached if cached is not None else state
 
-    async def async_test_connection(self):
+    async def async_test_connection(self) -> bool:
         """Test the connection to the CCM15 device."""
-        url = f"http://{self.host}:{self.port}/{CONF_URL_STATUS}"
+        url = BASE_URL.format(self.host, self.port, CONF_URL_STATUS)
         try:
-            async with aiohttp.ClientSession() as session, session.get(
-                url, timeout = self.timeout
-            ) as response:
-                if response.status == 200:
-                    return True
-                return False
-        except (aiohttp.ClientError, asyncio.TimeoutError):
+            response = await self._get_client().get(url, timeout=self.timeout)
+        except httpx.RequestError:
             return False
+        return response.status_code == 200
 
     async def async_send_state(self, url: str) -> bool:
         """Send the url to set state to the ccm15 slave."""
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout = self.timeout)
-            return response.status_code in (httpx.codes.OK, httpx.codes.FOUND)
+        response = await self._get_client().get(url, timeout=self.timeout)
+        return response.status_code in (httpx.codes.OK, httpx.codes.FOUND)
 
     async def async_set_state(self, ac_index: int, data) -> bool:
         """Set new target states.
@@ -156,4 +181,3 @@ class CCM15Device:
         )
 
         return await self.async_send_state(url)
-
