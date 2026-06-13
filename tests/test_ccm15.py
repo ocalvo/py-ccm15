@@ -95,10 +95,11 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         good.text = "<response><a0>00000001020304,</a0></response>"
         mock_get.side_effect = [good, httpx.ConnectTimeout("boom")]
 
-        with patch("ccm15.CCM15Device.time.monotonic", side_effect=[0.0, 301.0]):
+        await ccm.get_status_async()
+        # Backdate the last good read past the TTL window.
+        ccm._last_good_monotonic -= 301
+        with self.assertRaises(httpx.ConnectTimeout):
             await ccm.get_status_async()
-            with self.assertRaises(httpx.ConnectTimeout):
-                await ccm.get_status_async()
 
     @patch("httpx.AsyncClient.get")
     async def test_ttl_zero_disables_cache(self, mock_get) -> None:
