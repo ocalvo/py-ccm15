@@ -38,7 +38,6 @@ asyncio.run(main())
 - Python 3.7+
 - httpx>=0.24.1
 - xmltodict>=0.13.0
-- aiohttp>=3.8.5
 
 ## Documentation
 
