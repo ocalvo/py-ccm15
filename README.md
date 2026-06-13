@@ -61,6 +61,12 @@ an independent CCM15 Home Assistant component whose `status.xml` decoding and
 `ctrl.xml` command handling were a valuable second reference for validating this
 library's wire protocol.
 
+Special thanks to [Alexa (@Alexa-RR)](https://github.com/Alexa-RR), who captured
+the controller's own `midea.js` from a live device and traced the protocol to
+document the swing (`sw`, status byte 4 bit 1) and electric-heater (`ht`, status
+byte 4 bit 0) parameters and their control-URL semantics. That work is the basis
+for the opt-in swing/heater support and much of [PROTOCOL.md](PROTOCOL.md).
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
