@@ -38,7 +38,6 @@ asyncio.run(main())
 - Python 3.7+
 - httpx>=0.24.1
 - xmltodict>=0.13.0
-- aiohttp>=3.8.5
 
 ## Documentation
 
@@ -56,6 +55,11 @@ HVAC/fan mode command mappings — was originally derived from the
 Home Assistant custom component (originally authored by Chao Shen). This library
 re-implements that protocol as a standalone, async package. Thanks to the original
 authors for reverse-engineering the controller protocol.
+
+Thanks also to [daxingplay/home-assistant-midea-ccm15](https://github.com/daxingplay/home-assistant-midea-ccm15),
+an independent CCM15 Home Assistant component whose `status.xml` decoding and
+`ctrl.xml` command handling were a valuable second reference for validating this
+library's wire protocol.
 
 ## License
 

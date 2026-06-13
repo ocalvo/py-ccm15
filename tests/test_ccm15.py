@@ -74,9 +74,13 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         first = await self.ccm.get_status_async()
         self.assertEqual(set(first.devices.keys()), {0})
         self.assertEqual(first.devices[0].age, 0.0)  # live read
+        # Age the last good read deterministically: back-to-back calls can land
+        # inside a single time.monotonic() tick (coarse on some platforms), so
+        # don't rely on wall-clock elapsing to prove the cached read is stamped.
+        self.ccm._last_good_monotonic -= 5
         second = await self.ccm.get_status_async()
         self.assertIs(second, first)  # served from cache, identical object
-        self.assertGreater(second.devices[0].age, 0.0)  # stamped as stale
+        self.assertGreaterEqual(second.devices[0].age, 5.0)  # stamped as stale
 
     @patch("httpx.AsyncClient.get")
     async def test_exception_serves_cached_state(self, mock_get) -> None:
@@ -196,6 +200,46 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
 
         called_url = mock_get.call_args.args[0]
         self.assertNotIn("pwd=", called_url)
+
+    async def test_uses_injected_client_when_provided(self) -> None:
+        """A client passed to the constructor is reused instead of building a new one."""
+        injected = MagicMock(spec=httpx.AsyncClient)
+        device = CCM15Device("localhost", 8000, client=injected)
+        self.assertIs(device._get_client(), injected)
+
+    async def test_builds_client_when_not_provided(self) -> None:
+        """Standalone callers can still use the library without an injected client."""
+        device = CCM15Device("localhost", 8000)
+        client = device._get_client()
+        self.assertIsInstance(client, httpx.AsyncClient)
+        # Lazy creation is cached for the lifetime of the device.
+        self.assertIs(device._get_client(), client)
+
+    async def test_aclose_closes_self_built_client(self) -> None:
+        """A client the library built is closed (no leak) on aclose()."""
+        device = CCM15Device("localhost", 8000)
+        built = device._get_client()
+        await device.aclose()
+        self.assertTrue(built.is_closed)
+        self.assertIsNone(device._client)
+        # Idempotent: a second close is a no-op, not an error.
+        await device.aclose()
+
+    async def test_aclose_leaves_injected_client_open(self) -> None:
+        """An injected client is owned by the caller and must not be closed."""
+        injected = httpx.AsyncClient()
+        device = CCM15Device("localhost", 8000, client=injected)
+        await device.aclose()
+        self.assertFalse(injected.is_closed)
+        self.assertIs(device._client, injected)
+        await injected.aclose()
+
+    async def test_context_manager_closes_self_built_client(self) -> None:
+        """`async with CCM15Device(...)` closes a self-built client on exit."""
+        async with CCM15Device("localhost", 8000) as device:
+            built = device._get_client()
+            self.assertFalse(built.is_closed)
+        self.assertTrue(built.is_closed)
 
 
 if __name__ == "__main__":
