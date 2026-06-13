@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/ocalvo/py-ccm15/compare/v0.3.0...v0.4.0) (2026-06-13)
+
+
+### Features
+
+* optional password (pwd=) authentication for control commands ([#17](https://github.com/ocalvo/py-ccm15/issues/17)) ([85a635f](https://github.com/ocalvo/py-ccm15/commit/85a635f3358e3b62b60ac877d91a2812b84dac82))
+
 ## [0.3.0](https://github.com/ocalvo/py-ccm15/compare/v0.2.4...v0.3.0) (2026-06-13)
 
 
