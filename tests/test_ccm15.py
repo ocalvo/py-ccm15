@@ -168,6 +168,35 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         self.assertIn("fan=2", called_url)
         self.assertIn("temp=26", called_url)
 
+    @patch("httpx.AsyncClient.get")
+    async def test_set_state_url_includes_password(self, mock_get):
+        """When a password is configured, the ctrl.xml URL carries pwd=."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        device = CCM15Device("localhost", 8000, password="123456")
+        data = MagicMock(ac_mode=0, fan_mode=4, temperature_setpoint=22)
+        self.assertTrue(await device.async_set_state(1, data))
+
+        called_url = mock_get.call_args.args[0]
+        self.assertIn("pwd=123456", called_url)
+        self.assertIn("ac0=2", called_url)  # 2 ** 1
+
+    @patch("httpx.AsyncClient.get")
+    async def test_set_state_url_omits_password_when_unset(self, mock_get):
+        """Without a password the URL must not include a pwd parameter."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        device = CCM15Device("localhost", 8000)
+        data = MagicMock(ac_mode=1, fan_mode=2, temperature_setpoint=18)
+        await device.async_set_state(0, data)
+
+        called_url = mock_get.call_args.args[0]
+        self.assertNotIn("pwd=", called_url)
+
 
 if __name__ == "__main__":
     unittest.main()
