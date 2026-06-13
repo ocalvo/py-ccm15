@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/ocalvo/py-ccm15/compare/v0.2.2...v0.2.3) (2026-06-13)
+
+
+### Documentation
+
+* attribute CCM15 protocol to houselabs/home-assistant-mideaccm ([#30](https://github.com/ocalvo/py-ccm15/issues/30)) ([0e788ef](https://github.com/ocalvo/py-ccm15/commit/0e788efa95f53236377ab61fb64fb15c4bbf007b))
+* note that this library is consumed by Home Assistant core ([#27](https://github.com/ocalvo/py-ccm15/issues/27)) ([f28101d](https://github.com/ocalvo/py-ccm15/commit/f28101db628611db860d09fb3da602ef50fcbbbf))
+
 ## [0.2.2](https://github.com/ocalvo/py-ccm15/compare/v0.2.1...v0.2.2) (2026-06-13)
 
 
