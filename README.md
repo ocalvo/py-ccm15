@@ -48,6 +48,15 @@ For full API reference and advanced usage, visit the [GitHub repository](https:/
 
 Pull requests are welcome. If you find a bug or have a feature request, feel free to open an issue.
 
+## Acknowledgements
+
+The CCM15 wire protocol implemented here — the `status.xml` byte decoding and the
+HVAC/fan mode command mappings — was originally derived from the
+[houselabs/home-assistant-mideaccm](https://github.com/houselabs/home-assistant-mideaccm)
+Home Assistant custom component (originally authored by Chao Shen). This library
+re-implements that protocol as a standalone, async package. Thanks to the original
+authors for reverse-engineering the controller protocol.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
