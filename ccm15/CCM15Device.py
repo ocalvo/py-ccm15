@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import time
 import httpx
 import xmltodict
 import aiohttp
@@ -9,12 +12,23 @@ BASE_URL = "http://{0}:{1}/{2}"
 CONF_URL_STATUS = "status.xml"
 CONF_URL_CTRL = "ctrl.xml"
 DEFAULT_TIMEOUT = 10
+DEFAULT_STATE_TTL = 300
 
 class CCM15Device:
-    def __init__(self, host: str, port: int, timeout = DEFAULT_TIMEOUT):
+    def __init__(self, host: str, port: int, timeout = DEFAULT_TIMEOUT,
+                 state_ttl = DEFAULT_STATE_TTL):
         self.host = host
         self.port = port
         self.timeout = timeout
+        # The CCM15 is a flaky embedded bridge: status.xml periodically times
+        # out or returns a degraded body (empty, or every slot "-") for up to a
+        # minute at a time, even while every AC is online. Cache the last read
+        # that actually decoded devices and serve it for up to `state_ttl`
+        # seconds so a transient dropout does not flap every entity to
+        # unavailable. Set state_ttl to 0 to disable caching.
+        self.state_ttl = state_ttl
+        self._last_state = None
+        self._last_good_monotonic = None
 
     async def _fetch_xml_data(self) -> str:
         url = BASE_URL.format(self.host, self.port, CONF_URL_STATUS)
@@ -50,8 +64,42 @@ class CCM15Device:
             ac_data.devices[ac_index] = CCM15SlaveDevice(bytesarr)
         return ac_data
 
+    def _fresh_cached_state(self) -> CCM15DeviceState | None:
+        """Return the last good state if it is still within the TTL, else None."""
+        if (
+            self.state_ttl
+            and self._last_state is not None
+            and self._last_good_monotonic is not None
+            and (time.monotonic() - self._last_good_monotonic) < self.state_ttl
+        ):
+            return self._last_state
+        return None
+
     async def get_status_async(self) -> CCM15DeviceState:
-        return await self._fetch_data()
+        """Return the current device state, tolerating transient dropouts.
+
+        A poll that raises (timeout/connection error) or decodes to zero
+        devices is treated as a transient dropout: the last state that did
+        decode devices is returned instead, as long as it is younger than
+        `state_ttl`. Once the cache ages past the TTL the real failure surfaces
+        (the exception propagates, or an empty state is returned) so a device
+        that is genuinely offline does eventually go unavailable.
+        """
+        try:
+            state = await self._fetch_data()
+        except Exception:
+            cached = self._fresh_cached_state()
+            if cached is not None:
+                return cached
+            raise
+
+        if state.devices:
+            self._last_state = state
+            self._last_good_monotonic = time.monotonic()
+            return state
+
+        cached = self._fresh_cached_state()
+        return cached if cached is not None else state
 
     async def async_test_connection(self):
         """Test the connection to the CCM15 device."""

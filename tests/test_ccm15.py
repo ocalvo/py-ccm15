@@ -1,5 +1,8 @@
 import unittest
 from unittest.mock import patch, MagicMock
+
+import httpx
+
 from ccm15 import CCM15Device, CCM15DeviceState, CCM15SlaveDevice
 
 
@@ -58,6 +61,58 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
 
         state = await self.ccm.get_status_async()
         self.assertEqual(set(state.devices.keys()), {0})
+
+    @patch("httpx.AsyncClient.get")
+    async def test_empty_response_serves_cached_state(self, mock_get) -> None:
+        """A transient all-'-' body returns the last good state, not empty."""
+        good = MagicMock()
+        good.text = "<response><a0>00000001020304,</a0></response>"
+        empty = MagicMock()
+        empty.text = "<response><a0>-</a0></response>"
+        mock_get.side_effect = [good, empty]
+
+        first = await self.ccm.get_status_async()
+        self.assertEqual(set(first.devices.keys()), {0})
+        second = await self.ccm.get_status_async()
+        self.assertIs(second, first)  # served from cache, identical object
+
+    @patch("httpx.AsyncClient.get")
+    async def test_exception_serves_cached_state(self, mock_get) -> None:
+        """A transient fetch error returns the last good state, not a raise."""
+        good = MagicMock()
+        good.text = "<response><a0>00000001020304,</a0></response>"
+        mock_get.side_effect = [good, httpx.ConnectTimeout("boom")]
+
+        first = await self.ccm.get_status_async()
+        second = await self.ccm.get_status_async()
+        self.assertIs(second, first)
+
+    @patch("httpx.AsyncClient.get")
+    async def test_cache_expires_after_ttl(self, mock_get) -> None:
+        """Past the TTL the real failure surfaces (exception propagates)."""
+        ccm = CCM15Device("localhost", 8000, state_ttl=300)
+        good = MagicMock()
+        good.text = "<response><a0>00000001020304,</a0></response>"
+        mock_get.side_effect = [good, httpx.ConnectTimeout("boom")]
+
+        with patch("ccm15.CCM15Device.time.monotonic", side_effect=[0.0, 301.0]):
+            await ccm.get_status_async()
+            with self.assertRaises(httpx.ConnectTimeout):
+                await ccm.get_status_async()
+
+    @patch("httpx.AsyncClient.get")
+    async def test_ttl_zero_disables_cache(self, mock_get) -> None:
+        """state_ttl=0 opts out: empty responses return empty state."""
+        ccm = CCM15Device("localhost", 8000, state_ttl=0)
+        good = MagicMock()
+        good.text = "<response><a0>00000001020304,</a0></response>"
+        empty = MagicMock()
+        empty.text = "<response><a0>-</a0></response>"
+        mock_get.side_effect = [good, empty]
+
+        await ccm.get_status_async()
+        second = await ccm.get_status_async()
+        self.assertEqual(second.devices, {})
 
     @patch("httpx.AsyncClient.get")
     async def test_async_set_state_low_slot(self, mock_get):
