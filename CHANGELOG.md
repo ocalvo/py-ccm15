@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/ocalvo/py-ccm15/compare/v0.5.0...v0.6.0) (2026-06-13)
+
+
+### Features
+
+* opt-in electric heater (ht) via a TriState desired value ([#44](https://github.com/ocalvo/py-ccm15/issues/44)) ([2912e1b](https://github.com/ocalvo/py-ccm15/commit/2912e1b067f42001d88ca4de053f520a39df2bae))
+
 ## [0.5.0](https://github.com/ocalvo/py-ccm15/compare/v0.4.0...v0.5.0) (2026-06-13)
 
 
