@@ -283,6 +283,58 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         called_url = mock_get.call_args.args[0]
         self.assertIn("sw=0", called_url)
 
+    @patch("httpx.AsyncClient.get")
+    async def test_set_state_omits_heater_by_default(self, mock_get):
+        """A freshly decoded device has desired_heater UNSET, so no ht is sent."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        data = CCM15SlaveDevice(bytes.fromhex("00000001020304"))
+        self.assertIs(data.desired_heater, TriState.UNSET)
+        await self.ccm.async_set_state(0, data)
+
+        called_url = mock_get.call_args.args[0]
+        self.assertNotIn("ht=", called_url)
+
+    @patch("httpx.AsyncClient.get")
+    async def test_set_state_sends_heater_on_when_desired(self, mock_get):
+        """Setting desired_heater=ON emits ht=1, independent of swing."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        data = CCM15SlaveDevice(bytes.fromhex("00000001020304"))
+        data.desired_heater = TriState.ON
+        await self.ccm.async_set_state(1, data)
+
+        called_url = mock_get.call_args.args[0]
+        self.assertIn("ht=1", called_url)
+        self.assertNotIn("sw=", called_url)  # heater is independent of swing
+
+    @patch("httpx.AsyncClient.get")
+    async def test_set_state_sends_heater_off_when_desired(self, mock_get):
+        """Setting desired_heater=OFF emits ht=0."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        data = CCM15SlaveDevice(bytes.fromhex("00000001020304"))
+        data.desired_heater = TriState.OFF
+        await self.ccm.async_set_state(0, data)
+
+        called_url = mock_get.call_args.args[0]
+        self.assertIn("ht=0", called_url)
+
+
+class TestHeaterDecode(unittest.TestCase):
+    def test_is_heater_on_decoded_from_byte4_bit0(self):
+        # byte 4 bit 0 set -> heater on; clear -> off. Other bytes arbitrary.
+        on = CCM15SlaveDevice(bytes.fromhex("00000000010000"))
+        self.assertTrue(on.is_heater_on)
+        off = CCM15SlaveDevice(bytes.fromhex("00000000000000"))
+        self.assertFalse(off.is_heater_on)
+
 
 class TestTriState(unittest.TestCase):
     def test_from_bool(self):

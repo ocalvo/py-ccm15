@@ -45,11 +45,17 @@ class CCM15SlaveDevice:
             self.locked_heat_temperature += 62
         # Current swing state decoded from status (read-only view for display).
         self.is_swing_on: bool = (buf >> 1) & 1 != 0
+        # Current electric-heater state decoded from status (byte 4, bit 0),
+        # per the controller's own midea.js. Read-only view for display.
+        self.is_heater_on: bool = (buf >> 0) & 1 != 0
         # Desired swing to write on the next control command. Distinct from the
         # decoded current state above: it defaults to UNSET (omit `sw` from the
         # command) and is only changed by an explicit caller, so polling never
         # causes `sw` to start being sent. See `desired_swing`.
         self._desired_swing: TriState = TriState.UNSET
+        # Desired electric-heater state to write on the next control command.
+        # Same opt-in contract as desired_swing: UNSET omits `ht` entirely.
+        self._desired_heater: TriState = TriState.UNSET
 
         buf = bytesarr[5]
         if ((buf >> 3) & 1) == 0:
@@ -75,3 +81,18 @@ class CCM15SlaveDevice:
     @desired_swing.setter
     def desired_swing(self, value: TriState) -> None:
         self._desired_swing = value
+
+    @property
+    def desired_heater(self) -> TriState:
+        """Electric-heater value to write on the next control command.
+
+        ``UNSET`` (the default) omits the ``ht`` parameter from the command;
+        ``ON``/``OFF`` send it explicitly. Like ``desired_swing``, this is
+        opt-in because not every firmware accepts ``ht`` and the controller
+        treats each write as the complete desired state.
+        """
+        return self._desired_heater
+
+    @desired_heater.setter
+    def desired_heater(self, value: TriState) -> None:
+        self._desired_heater = value

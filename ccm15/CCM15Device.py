@@ -194,5 +194,11 @@ class CCM15Device:
         desired_swing = getattr(data, "desired_swing", TriState.UNSET)
         if isinstance(desired_swing, TriState) and desired_swing.is_set:
             url += "&sw=" + str(desired_swing.value)
+        # Opt-in electric heater: same contract as swing. UNSET omits `ht`, so
+        # firmware that does not accept the electric-heater parameter is
+        # unaffected and polling never causes `ht` to start being sent.
+        desired_heater = getattr(data, "desired_heater", TriState.UNSET)
+        if isinstance(desired_heater, TriState) and desired_heater.is_set:
+            url += "&ht=" + str(desired_heater.value)
 
         return await self.async_send_state(url)
