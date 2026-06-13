@@ -33,7 +33,8 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         mock_get.return_value = mock_response
 
         # Call method and check result
-        result = await self.ccm.async_set_state(0, "state", 1)
+        state = CCM15SlaveDevice(bytes.fromhex("00000041d2001a"))
+        result = await self.ccm.async_set_state(0, state)
         self.assertTrue(result)
 
 if __name__ == "__main__":
