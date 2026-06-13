@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/ocalvo/py-ccm15/compare/v0.2.3...v0.2.4) (2026-06-13)
+
+
+### Bug Fixes
+
+* tolerate transient CCM15 dropouts and report per-device data age ([#34](https://github.com/ocalvo/py-ccm15/issues/34)) ([fe1529c](https://github.com/ocalvo/py-ccm15/commit/fe1529c58964823a084cdeaaf98d6b7607444d7d))
+
 ## [0.2.3](https://github.com/ocalvo/py-ccm15/compare/v0.2.2...v0.2.3) (2026-06-13)
 
 
