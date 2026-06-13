@@ -57,7 +57,7 @@ asyncio.run(main())
 
 ## Documentation
 
-For full API reference and advanced usage, visit the [GitHub repository](https://github.com/ocalvo/py-ccm15).
+For full API reference and advanced usage, visit the [GitHub repository](https://github.com/HomeOps/py-ccm15).
 
 ## Protocol
 

@@ -105,7 +105,7 @@ Link the GitHub compare view rather than copying the changelog text — it is
 self-updating and lets reviewers see every commit:
 
 ```
-[`v0.1.2...v0.2.4`](https://github.com/ocalvo/py-ccm15/compare/v0.1.2...v0.2.4)
+[`v0.1.2...v0.2.4`](https://github.com/HomeOps/py-ccm15/compare/v0.1.2...v0.2.4)
 ```
 
 (both `v<old-pin>` and `v<new-version>` are real tags release-please pushes).
