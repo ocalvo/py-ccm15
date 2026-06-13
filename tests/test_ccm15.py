@@ -168,6 +168,33 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         self.assertIn("fan=2", called_url)
         self.assertIn("temp=26", called_url)
 
+    @patch("httpx.AsyncClient.get")
+    async def test_set_state_swing_on_sends_sw_and_ht(self, mock_get):
+        """is_swing_on=True maps to sw=1; ht=0 is sent (see issue #39)."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        data = MagicMock(ac_mode=0, fan_mode=4, temperature_setpoint=22, is_swing_on=True)
+        await self.ccm.async_set_state(1, data)
+
+        called_url = mock_get.call_args.args[0]
+        self.assertIn("sw=1", called_url)
+        self.assertIn("ht=0", called_url)
+
+    @patch("httpx.AsyncClient.get")
+    async def test_set_state_swing_off_sends_sw_zero(self, mock_get):
+        """is_swing_on=False maps to sw=0."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        data = MagicMock(ac_mode=1, fan_mode=2, temperature_setpoint=18, is_swing_on=False)
+        await self.ccm.async_set_state(0, data)
+
+        called_url = mock_get.call_args.args[0]
+        self.assertIn("sw=0", called_url)
+
 
 if __name__ == "__main__":
     unittest.main()

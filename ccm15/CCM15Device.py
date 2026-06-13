@@ -142,6 +142,18 @@ class CCM15Device:
         else:
             ac0 = 0
             ac1 = 2 ** (ac_index - 32)
+        # sw is the swing-louver flag; it mirrors CCM15SlaveDevice.is_swing_on
+        # (decoded from byte 4, bit 1) so a command round-trips with the
+        # decoded state. 1 = swing on, 0 = off.
+        sw = 1 if getattr(data, "is_swing_on", False) else 0
+        # ht is sent as a constant 0 because that is what the controller's own
+        # web UI sends. Its exact meaning is NOT decoded from status anywhere in
+        # this library, so a hardcoded 0 is unverified: the CCM15 treats every
+        # ctrl.xml write as the full desired state (see #15), so if ht is an
+        # aux-heat flag this would force it off on every command. Confirming
+        # what ht is and whether it must be derived is tracked in
+        # https://github.com/ocalvo/py-ccm15/issues/39 and gates merging this.
+        ht = 0
         url = BASE_URL.format(
             self.host,
             self.port,
@@ -153,6 +165,8 @@ class CCM15Device:
             + "&mode=" + str(data.ac_mode)
             +  "&fan=" + str(data.fan_mode)
             + "&temp=" + str(data.temperature_setpoint)
+            + "&sw=" + str(sw)
+            + "&ht=" + str(ht)
         )
 
         return await self.async_send_state(url)
