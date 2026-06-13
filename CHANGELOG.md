@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/ocalvo/py-ccm15/compare/v0.4.0...v0.5.0) (2026-06-13)
+
+
+### Features
+
+* opt-in swing control via a TriState desired value ([#43](https://github.com/ocalvo/py-ccm15/issues/43)) ([c95bf12](https://github.com/ocalvo/py-ccm15/commit/c95bf127bc7fc9ef454fad50e793be8875227d49))
+
 ## [0.4.0](https://github.com/ocalvo/py-ccm15/compare/v0.3.0...v0.4.0) (2026-06-13)
 
 
