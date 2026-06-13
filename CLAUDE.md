@@ -93,20 +93,26 @@ Implications when changing this repo:
   behavior in HA (see issue #15), so keep the decode semantics stable and
   documented.
 
-### homeassistant/core bump PRs must list every change in the version delta
+### homeassistant/core bump PRs must show the full version delta
 
 A bump PR usually skips several releases (the pin lags the latest PyPI
-version), so its description must enumerate **all** changes between the
-previously pinned version and the new one — not just the headline fix that
-motivated the bump. HA reviewers and changelog readers see only the PR
-description; an undocumented fix in an intermediate release is effectively
-invisible.
+version), so its description must cover **all** changes between the previously
+pinned version and the new one — not just the headline fix that motivated the
+bump. HA reviewers and changelog readers see only the PR description; an
+undocumented fix in an intermediate release is effectively invisible.
 
-When writing the bump PR body, walk `CHANGELOG.md` from the old pin
-(exclusive) to the new version (inclusive) and list each `feat`/`fix`/`perf`
-entry with its upstream PR/issue link. Skip `docs`/`chore`/`ci`/`test`
-entries (no runtime effect). Example for a `0.1.2` → `0.2.4` bump: cover the
-relevant entries from `0.2.0`, `0.2.1`, `0.2.2`, `0.2.3`, and `0.2.4`.
+Link the GitHub compare view rather than copying the changelog text — it is
+self-updating and lets reviewers see every commit:
+
+```
+[`v0.1.2...v0.2.4`](https://github.com/ocalvo/py-ccm15/compare/v0.1.2...v0.2.4)
+```
+
+(both `v<old-pin>` and `v<new-version>` are real tags release-please pushes).
+Then add a one- or two-sentence summary of only the **runtime-affecting**
+changes (`feat`/`fix`/`perf`) with their upstream PR/issue links, and note
+that the rest are `docs`/`chore`/`ci`/`test` with no runtime effect. Do not
+paste the changelog entries verbatim.
 
 ## Versioning
 
