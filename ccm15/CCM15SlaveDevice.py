@@ -8,6 +8,12 @@ class CCM15SlaveDevice:
 
     def __init__(self, bytesarr: bytes) -> None:
         """Initialize the slave device."""
+        # Seconds since this device's data was actually read from the
+        # controller. 0.0 for a live read; > 0 when served from the last-good
+        # cache during a transient dropout (set by
+        # CCM15Device.get_status_async). Lets a consumer such as Home Assistant
+        # expose a "data is N seconds old" attribute per entity.
+        self.age: float = 0.0
         self.is_celsius = True
         buf = bytesarr[0]
         if (buf >> 0) & 1:
