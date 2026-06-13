@@ -21,5 +21,7 @@ license-files = ["LICENSE"]
 
 
 [project.urls]
-Homepage = "https://github.com/ocalvo/py-ccm15"
+Homepage = "https://github.com/HomeOps/py-ccm15"
+Repository = "https://github.com/HomeOps/py-ccm15"
+Changelog = "https://github.com/HomeOps/py-ccm15/blob/main/CHANGELOG.md"
 
