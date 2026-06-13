@@ -73,8 +73,10 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
 
         first = await self.ccm.get_status_async()
         self.assertEqual(set(first.devices.keys()), {0})
+        self.assertEqual(first.devices[0].age, 0.0)  # live read
         second = await self.ccm.get_status_async()
         self.assertIs(second, first)  # served from cache, identical object
+        self.assertGreater(second.devices[0].age, 0.0)  # stamped as stale
 
     @patch("httpx.AsyncClient.get")
     async def test_exception_serves_cached_state(self, mock_get) -> None:

@@ -65,14 +65,21 @@ class CCM15Device:
         return ac_data
 
     def _fresh_cached_state(self) -> CCM15DeviceState | None:
-        """Return the last good state if it is still within the TTL, else None."""
+        """Return the last good state if it is still within the TTL, else None.
+
+        Stamps every cached device's `age` with how many seconds old the data
+        is, so a consumer can tell a cached read from a live one per device.
+        """
         if (
             self.state_ttl
             and self._last_state is not None
             and self._last_good_monotonic is not None
-            and (time.monotonic() - self._last_good_monotonic) < self.state_ttl
         ):
-            return self._last_state
+            age = time.monotonic() - self._last_good_monotonic
+            if age < self.state_ttl:
+                for device in self._last_state.devices.values():
+                    device.age = age
+                return self._last_state
         return None
 
     async def get_status_async(self) -> CCM15DeviceState:
