@@ -31,7 +31,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pytest
+          pip install pytest pytest-cov
 
-      - name: Run unit tests
-        run: python -m pytest -q
+      - name: Run unit tests with coverage
+        run: python -m pytest -q --cov=ccm15 --cov-branch --cov-report=term-missing --cov-fail-under=95
