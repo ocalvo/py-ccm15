@@ -57,6 +57,11 @@ Home Assistant custom component (originally authored by Chao Shen). This library
 re-implements that protocol as a standalone, async package. Thanks to the original
 authors for reverse-engineering the controller protocol.
 
+Thanks also to [daxingplay/home-assistant-midea-ccm15](https://github.com/daxingplay/home-assistant-midea-ccm15),
+an independent CCM15 Home Assistant component whose `status.xml` decoding and
+`ctrl.xml` command handling were a valuable second reference for validating this
+library's wire protocol.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
