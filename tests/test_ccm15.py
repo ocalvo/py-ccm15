@@ -87,6 +87,29 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         self.assertIn("ac0=0", called_url)
         self.assertIn("ac1=256", called_url)  # 2 ** (40 - 32)
 
+    @patch("httpx.AsyncClient.get")
+    async def test_async_set_state_sends_full_state(self, mock_get):
+        """Regression test for #15.
+
+        The CCM15 treats every ctrl.xml write as the complete desired state and
+        resets any omitted field to its default (which lands on COOL). So a
+        single set must always carry mode, fan AND temp together, using the
+        caller's current values. Here the unit is in HEAT (mode=1) with a
+        non-default fan; all three must appear in the command, otherwise the
+        controller would revert to COOL.
+        """
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        data = MagicMock(ac_mode=1, fan_mode=2, temperature_setpoint=26)
+        self.assertTrue(await self.ccm.async_set_state(0, data))
+
+        called_url = mock_get.call_args.args[0]
+        self.assertIn("mode=1", called_url)  # HEAT preserved, not reset to COOL
+        self.assertIn("fan=2", called_url)
+        self.assertIn("temp=26", called_url)
+
 
 if __name__ == "__main__":
     unittest.main()
