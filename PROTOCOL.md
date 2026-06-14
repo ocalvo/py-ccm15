@@ -133,7 +133,7 @@ lands on COOL). A single write must therefore always carry the mode, fan and
 temperature it wants to keep — see the regression behavior in issue #15.
 
 ```
-http://<host>:<port>/ctrl.xml?[pwd=<pwd>&]ac0=<mask>&ac1=<mask>&mode=<m>&fan=<f>&temp=<t>[&sw=<0|1>][&ht=<0|1>]
+http://<host>:<port>/ctrl.xml?[pwd=<obf>&utsxxx=<nonce>&]ac0=<mask>&ac1=<mask>&mode=<m>&fan=<f>&temp=<t>[&sw=<0|1>][&ht=<0|1>]
 ```
 
 | Param | Required | Meaning |
@@ -143,7 +143,8 @@ http://<host>:<port>/ctrl.xml?[pwd=<pwd>&]ac0=<mask>&ac1=<mask>&mode=<m>&fan=<f>
 | `mode` | yes | Target HVAC mode — see **Mode codes**. |
 | `fan` | yes | Target fan speed — see **Fan codes**. |
 | `temp` | yes | Target temperature setpoint. |
-| `pwd` | optional | 6-digit device password. Some firmwares reject control writes unless it is supplied; omitted otherwise. |
+| `pwd` | optional | **Obfuscated** device password — *not* the value the user configured. Some firmwares reject control writes unless it is supplied. See **Password** below. |
+| `utsxxx` | optional | Per-request nonce sent alongside `pwd`: current time in milliseconds modulo `1000`. See **Password**. |
 | `sw` | optional | Swing: `1` on, `0` off. **Opt-in** (see below). |
 | `ht` | optional | Electric auxiliary heater: `1` on, `0` off. **Opt-in** (see below). |
 
@@ -169,6 +170,55 @@ from the *desired* value a caller wants to write (`desired_swing`,
 `desired_heater`, of type `TriState` — `UNSET` / `OFF` / `ON`). `UNSET` (the
 default) leaves the parameter out entirely, so a poll never causes it to start
 being sent.
+
+### Password (`pwd` / `utsxxx`)
+
+The `pwd` value on the wire is **not** the password the user configures on the
+controller's settings page. The controller's web UI obfuscates it in
+`pwdstr()`:
+
+```js
+// from a captured midea.js
+function pwdstr() {
+    var ts = (new Date()).valueOf();
+    var p  = parseInt(pwd);
+    p ^= 0x56789;      // XOR with a fixed magic key
+    p >>>= 0;          // cast to unsigned 32-bit
+    return 'pwd=' + p + '&utsxxx=' + (ts % 1000);
+}
+```
+
+So the transform is:
+
+```
+pwd_on_wire = (configured_password XOR 0x56789) & 0xFFFFFFFF
+utsxxx      = milliseconds_since_epoch % 1000
+```
+
+The factory-default password `123456` therefore goes on the wire as
+`pwd=296393` (`0x1E240 ^ 0x56789 = 0x485C9 = 296393`). A consumer must apply
+this transform itself: a user can only reasonably know their *configured*
+value. This library does it internally — callers pass the configured numeric
+password and the library emits the obfuscated `pwd` plus the `utsxxx` nonce.
+
+The magic key `0x56789` and the `utsxxx` shape are **not publicly documented
+anywhere**; they come solely from a `midea.js` capture (see **Credits**). Only
+status reads are unauthenticated — which is why polling works without a password
+even on firmwares that require it for writes.
+
+### Response codes (`<ret>`)
+
+A `ctrl.xml` response carries a `<ret>` status element. The controller's web UI
+(`check_password()`) treats one value specially:
+
+| `<ret>` | Meaning |
+|---------|---------|
+| `250` | **Wrong password** — the write was rejected. The web UI re-prompts for the password. |
+| other / absent | The command was accepted. |
+
+This library surfaces the outcome as a `CCM15ReturnCode`
+(`OK` / `WRONG_PASSWORD` / `CONNECTION_ERROR`) rather than a bare boolean, so a
+consumer can distinguish a bad password from a transport failure.
 
 ### Mode codes (`mode=` / `ac_mode`)
 
@@ -202,7 +252,10 @@ known implementation, so its meaning has not been confirmed.)*
   from a live CCM15 controller and traced the protocol to document the
   swing (`sw`, status byte 4 bit 1) and **electric-heater** (`ht`, status byte 4
   bit 0) parameters, including the control-URL semantics. The heater bit and the
-  `sw`/`ht` command documentation here are her work.
+  `sw`/`ht` command documentation here are her work. She also reverse-engineered
+  the **password obfuscation** (`pwdstr()` — the `0x56789` XOR key, the unsigned
+  32-bit cast, and the `utsxxx` nonce) and the **`<ret>` response codes**
+  (`250` = wrong password); none of these are documented anywhere else.
 - **[houselabs/home-assistant-mideaccm](https://github.com/houselabs/home-assistant-mideaccm)**
   (originally authored by Chao Shen) — the original reverse-engineering of the
   `status.xml` byte layout and the HVAC/fan mode mappings.

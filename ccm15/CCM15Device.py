@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import re
 import time
 import httpx
 import xmltodict
 from .CCM15DeviceState import CCM15DeviceState
+from .CCM15ReturnCode import CCM15ReturnCode
 from .CCM15SlaveDevice import CCM15SlaveDevice
 from .TriState import TriState
 
@@ -13,6 +15,18 @@ CONF_URL_CTRL = "ctrl.xml"
 DEFAULT_TIMEOUT = 10
 DEFAULT_STATE_TTL = 300
 
+# Password obfuscation, mirroring the controller's own pwdstr() in midea.js.
+# The on-wire `pwd` value is the configured numeric password XORed with a fixed
+# magic key and cast to an unsigned 32-bit integer; a per-request `utsxxx`
+# nonce (milliseconds modulo 1000) is appended. These constants are otherwise
+# undocumented and come from a midea.js capture (see PROTOCOL.md / Credits).
+PASSWORD_XOR_KEY = 0x56789
+PASSWORD_MASK = 0xFFFFFFFF
+UTSXXX_MODULO = 1000
+
+# The controller returns its status in a <ret> element of the ctrl.xml response.
+_RET_PATTERN = re.compile(r"<ret>\s*(-?\d+)\s*</ret>")
+
 class CCM15Device:
     def __init__(self, host: str, port: int, timeout = DEFAULT_TIMEOUT,
                  state_ttl = DEFAULT_STATE_TTL,
@@ -21,10 +35,13 @@ class CCM15Device:
         self.host = host
         self.port = port
         self.timeout = timeout
-        # Some CCM15 firmwares reject control commands unless a 6-digit
-        # password is included as a "pwd" query parameter. When set, it is
-        # prepended to every ctrl.xml URL the library builds; when left as
-        # None the URL is built without it.
+        # Some CCM15 firmwares reject control commands unless the device
+        # password is supplied. Pass the *configured* numeric password exactly
+        # as shown on the controller's settings page (factory default
+        # "123456"). The library applies the same obfuscation the controller's
+        # web UI does (XOR with PASSWORD_XOR_KEY + utsxxx nonce) before putting
+        # it on the wire, so callers never deal with the obfuscated value. When
+        # None, no pwd parameter is sent.
         self.password = password
         # The CCM15 is a flaky embedded bridge: status.xml periodically times
         # out or returns a degraded body (empty, or every slot "-") for up to a
@@ -154,12 +171,48 @@ class CCM15Device:
             return False
         return response.status_code == 200
 
-    async def async_send_state(self, url: str) -> bool:
-        """Send the url to set state to the ccm15 slave."""
-        response = await self._get_client().get(url, timeout=self.timeout)
-        return response.status_code in (httpx.codes.OK, httpx.codes.FOUND)
+    async def async_send_state(self, url: str) -> CCM15ReturnCode:
+        """Send the url to set state to the ccm15 slave.
 
-    async def async_set_state(self, ac_index: int, data) -> bool:
+        Returns a :class:`CCM15ReturnCode`: ``OK`` when the controller accepted
+        the command, ``WRONG_PASSWORD`` when it rejected the ``pwd`` parameter
+        (``<ret>250</ret>``), or ``CONNECTION_ERROR`` on a non-OK HTTP status.
+        """
+        response = await self._get_client().get(url, timeout=self.timeout)
+        if response.status_code not in (httpx.codes.OK, httpx.codes.FOUND):
+            return CCM15ReturnCode.CONNECTION_ERROR
+        return self._parse_return_code(response.text)
+
+    @staticmethod
+    def _parse_return_code(text: str) -> CCM15ReturnCode:
+        """Map a ctrl.xml response body to a CCM15ReturnCode.
+
+        The controller's web UI only treats ``<ret>250</ret>`` as an error
+        (wrong password); any other code, or no ``<ret>`` at all, is an accepted
+        command, so everything else maps to ``OK``.
+        """
+        match = _RET_PATTERN.search(text or "")
+        if match is None:
+            return CCM15ReturnCode.OK
+        try:
+            return CCM15ReturnCode(int(match.group(1)))
+        except ValueError:
+            return CCM15ReturnCode.OK
+
+    def _password_query(self) -> str:
+        """Build the obfuscated `pwd`/`utsxxx` query prefix, or "" if no password.
+
+        Mirrors the controller's pwdstr(): the configured numeric password is
+        XORed with PASSWORD_XOR_KEY, cast to unsigned 32-bit, and paired with a
+        utsxxx nonce (milliseconds modulo UTSXXX_MODULO).
+        """
+        if not self.password:
+            return ""
+        pwd = (int(self.password) ^ PASSWORD_XOR_KEY) & PASSWORD_MASK
+        utsxxx = int(time.time() * 1000) % UTSXXX_MODULO
+        return f"pwd={pwd}&utsxxx={utsxxx}&"
+
+    async def async_set_state(self, ac_index: int, data) -> CCM15ReturnCode:
         """Set new target states.
 
         The controller addresses slaves with a 64-bit mask split across two
@@ -167,6 +220,9 @@ class CCM15Device:
         controller's own cmd_aclist() in midea.js). Previously the whole mask
         was written to ac0, which silently overflowed for slave indices >= 32
         and targeted the wrong unit (or nothing).
+
+        Returns a :class:`CCM15ReturnCode` describing how the controller
+        responded (see :meth:`async_send_state`).
         """
         if ac_index < 32:
             ac0 = 2 ** ac_index
@@ -174,7 +230,7 @@ class CCM15Device:
         else:
             ac0 = 0
             ac1 = 2 ** (ac_index - 32)
-        pwd_part = f"pwd={self.password}&" if self.password else ""
+        pwd_part = self._password_query()
         url = BASE_URL.format(
             self.host,
             self.port,

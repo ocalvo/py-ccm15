@@ -9,7 +9,7 @@ from unittest.mock import patch, MagicMock
 
 import httpx
 
-from ccm15 import CCM15Device
+from ccm15 import CCM15Device, CCM15ReturnCode
 
 
 class TestAsyncSendState(unittest.IsolatedAsyncioTestCase):
@@ -17,19 +17,41 @@ class TestAsyncSendState(unittest.IsolatedAsyncioTestCase):
         self.ccm = CCM15Device("localhost", 8000)
 
     @patch("httpx.AsyncClient.get")
-    async def test_returns_true_on_ok(self, mock_get):
-        mock_get.return_value = MagicMock(status_code=httpx.codes.OK)
-        self.assertTrue(await self.ccm.async_send_state("http://x/ctrl.xml"))
+    async def test_returns_ok_on_ok(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=httpx.codes.OK, text="")
+        self.assertEqual(
+            await self.ccm.async_send_state("http://x/ctrl.xml"),
+            CCM15ReturnCode.OK,
+        )
 
     @patch("httpx.AsyncClient.get")
-    async def test_returns_true_on_found(self, mock_get):
-        mock_get.return_value = MagicMock(status_code=httpx.codes.FOUND)
-        self.assertTrue(await self.ccm.async_send_state("http://x/ctrl.xml"))
+    async def test_returns_ok_on_found(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=httpx.codes.FOUND, text="")
+        self.assertEqual(
+            await self.ccm.async_send_state("http://x/ctrl.xml"),
+            CCM15ReturnCode.OK,
+        )
 
     @patch("httpx.AsyncClient.get")
-    async def test_returns_false_on_error_status(self, mock_get):
-        mock_get.return_value = MagicMock(status_code=httpx.codes.INTERNAL_SERVER_ERROR)
-        self.assertFalse(await self.ccm.async_send_state("http://x/ctrl.xml"))
+    async def test_returns_connection_error_on_error_status(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=httpx.codes.INTERNAL_SERVER_ERROR, text=""
+        )
+        self.assertEqual(
+            await self.ccm.async_send_state("http://x/ctrl.xml"),
+            CCM15ReturnCode.CONNECTION_ERROR,
+        )
+
+    @patch("httpx.AsyncClient.get")
+    async def test_returns_wrong_password_on_ret_250(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=httpx.codes.OK,
+            text="<response><ret>250</ret></response>",
+        )
+        self.assertEqual(
+            await self.ccm.async_send_state("http://x/ctrl.xml"),
+            CCM15ReturnCode.WRONG_PASSWORD,
+        )
 
 
 class TestAsyncTestConnection(unittest.IsolatedAsyncioTestCase):
