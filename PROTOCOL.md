@@ -109,18 +109,18 @@ understood.
 |------|-------|---------|
 | 0–7 | `temperature` | Current room temperature, **signed** 8-bit (`value` if `< 128`, else `value − 256`). |
 
-> **Fahrenheit and the current temperature.** Unlike the setpoint and lock
-> setpoints, byte 6 is decoded **as-is — no `+62` offset is applied in
-> Fahrenheit mode**. This matches every known implementation: the original
+> **Fahrenheit and the current temperature.** Byte 6 is decoded **as-is — no
+> `+62` offset is applied in Fahrenheit mode**, and that is correct: the
+> controller emits the current temperature directly in the **active display
+> unit**, so a Fahrenheit-configured device already reports the Fahrenheit value
+> (e.g. `72`) in byte 6. This was confirmed on a real unit: switching the
+> hand/remote controller to Fahrenheit changes byte 6 to report Fahrenheit. The
+> `+62` offset applies only to the 5-bit setpoint *code* (and the lock
+> setpoints), which need it to land in the Fahrenheit display range; byte 6 is
+> already a full degree value, so it needs none. (The original
 > [houselabs](https://github.com/houselabs/home-assistant-mideaccm) decode and
 > [daxingplay](https://github.com/daxingplay/home-assistant-midea-ccm15) both
-> offset only `settemp`/`ctl`/`htl` and leave `temp` raw, and all of them
-> hardcode the reported unit to Celsius. Whether the controller emits byte 6 in
-> the active **display unit** (so a Fahrenheit-configured device would report
-> e.g. `72`) or **always in Celsius** has **not** been confirmed against a
-> live Fahrenheit-configured controller — no source resolves it, because none of
-> the reference implementations actually handle the Fahrenheit display case.
-> Treat the unit of byte 6 on a Fahrenheit device as *unverified*.
+> leave `temp` raw, matching this.)
 
 ---
 
