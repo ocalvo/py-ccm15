@@ -61,7 +61,7 @@ understood.
 
 | Bits | Field | Meaning |
 |------|-------|---------|
-| 0 | `is_celsius` | `0` = Celsius, `1` = Fahrenheit. When Fahrenheit, all temperatures below have `+62` applied. |
+| 0 | `is_celsius` | `0` = Celsius, `1` = Fahrenheit. When Fahrenheit, the **setpoint** (byte 4) and the two **lock setpoints** (`locked_cool_temperature`, `locked_heat_temperature`) have `+62` applied. The **current temperature** (byte 6) does **not** — see the note under byte 6. |
 | 3–7 | `locked_cool_temperature` | Cooling lower-limit lock setpoint. Cleared to `0` unless byte 5 bit 3 marks the lock active. |
 
 #### Byte 1 — heat-limit lock & wind lock
@@ -92,7 +92,7 @@ understood.
 |------|-------|---------|
 | 0 | `is_heater_on` | Electric auxiliary heater on/off. *(Source: `midea.js`, captured by Alexa — see Credits.)* |
 | 1 | `is_swing_on` | Swing louver on/off. *(Source: `midea.js`, captured by Alexa.)* |
-| 3–7 | `temperature_setpoint` | Target temperature. `+62` when Fahrenheit. |
+| 3–7 | `temperature_setpoint` | Target temperature, a 5-bit code (0–31). `+62` when Fahrenheit. The `+62` is a **display offset, not a real °C→°F conversion** (e.g. raw `16` means 16 °C in Celsius mode or 78 in Fahrenheit mode — two different physical temperatures for the same code). The unit bit (byte 0) decides which interpretation applies. |
 
 #### Byte 5 — lock-active flags & remote lock
 
@@ -108,6 +108,19 @@ understood.
 | Bits | Field | Meaning |
 |------|-------|---------|
 | 0–7 | `temperature` | Current room temperature, **signed** 8-bit (`value` if `< 128`, else `value − 256`). |
+
+> **Fahrenheit and the current temperature.** Unlike the setpoint and lock
+> setpoints, byte 6 is decoded **as-is — no `+62` offset is applied in
+> Fahrenheit mode**. This matches every known implementation: the original
+> [houselabs](https://github.com/houselabs/home-assistant-mideaccm) decode and
+> [daxingplay](https://github.com/daxingplay/home-assistant-midea-ccm15) both
+> offset only `settemp`/`ctl`/`htl` and leave `temp` raw, and all of them
+> hardcode the reported unit to Celsius. Whether the controller emits byte 6 in
+> the active **display unit** (so a Fahrenheit-configured device would report
+> e.g. `72`) or **always in Celsius** has **not** been confirmed against a
+> live Fahrenheit-configured controller — no source resolves it, because none of
+> the reference implementations actually handle the Fahrenheit display case.
+> Treat the unit of byte 6 on a Fahrenheit device as *unverified*.
 
 ---
 
