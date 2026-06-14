@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import time
 import httpx
 import xmltodict
@@ -8,24 +7,18 @@ from .CCM15DeviceState import CCM15DeviceState
 from .CCM15ReturnCode import CCM15ReturnCode
 from .CCM15SlaveDevice import CCM15SlaveDevice
 from .TriState import TriState
+from .const import (
+    BASE_URL,
+    CONF_URL_CTRL,
+    CONF_URL_STATUS,
+    DEFAULT_STATE_TTL,
+    DEFAULT_TIMEOUT,
+    PASSWORD_MASK,
+    PASSWORD_XOR_KEY,
+    RET_PATTERN,
+    UTSXXX_MODULO,
+)
 
-BASE_URL = "http://{0}:{1}/{2}"
-CONF_URL_STATUS = "status.xml"
-CONF_URL_CTRL = "ctrl.xml"
-DEFAULT_TIMEOUT = 10
-DEFAULT_STATE_TTL = 300
-
-# Password obfuscation, mirroring the controller's own pwdstr() in midea.js.
-# The on-wire `pwd` value is the configured numeric password XORed with a fixed
-# magic key and cast to an unsigned 32-bit integer; a per-request `utsxxx`
-# nonce (milliseconds modulo 1000) is appended. These constants are otherwise
-# undocumented and come from a midea.js capture (see PROTOCOL.md / Credits).
-PASSWORD_XOR_KEY = 0x56789
-PASSWORD_MASK = 0xFFFFFFFF
-UTSXXX_MODULO = 1000
-
-# The controller returns its status in a <ret> element of the ctrl.xml response.
-_RET_PATTERN = re.compile(r"<ret>\s*(-?\d+)\s*</ret>")
 
 class CCM15Device:
     def __init__(self, host: str, port: int, timeout = DEFAULT_TIMEOUT,
@@ -191,7 +184,7 @@ class CCM15Device:
         (wrong password); any other code, or no ``<ret>`` at all, is an accepted
         command, so everything else maps to ``OK``.
         """
-        match = _RET_PATTERN.search(text or "")
+        match = RET_PATTERN.search(text or "")
         if match is None:
             return CCM15ReturnCode.OK
         try:
