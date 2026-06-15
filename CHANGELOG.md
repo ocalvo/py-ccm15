@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/HomeOps/py-ccm15/compare/v0.6.0...v1.0.0) (2026-06-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* `password` is now the configured value, not the pre-obfuscated URL value, and write helpers return CCM15ReturnCode instead of bool.
+
+### Features
+
+* obfuscate password and return CCM15ReturnCode from writes ([#55](https://github.com/HomeOps/py-ccm15/issues/55)) ([64b302b](https://github.com/HomeOps/py-ccm15/commit/64b302b98b323ebf98db10c86b018f1afd312246))
+
 ## [0.6.0](https://github.com/ocalvo/py-ccm15/compare/v0.5.0...v0.6.0) (2026-06-13)
 
 
