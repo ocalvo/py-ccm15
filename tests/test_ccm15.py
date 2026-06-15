@@ -3,7 +3,13 @@ from unittest.mock import patch, MagicMock
 
 import httpx
 
-from ccm15 import CCM15Device, CCM15DeviceState, CCM15SlaveDevice, TriState
+from ccm15 import (
+    CCM15Device,
+    CCM15DeviceState,
+    CCM15ReturnCode,
+    CCM15SlaveDevice,
+    TriState,
+)
 
 
 class TestCCM15(unittest.IsolatedAsyncioTestCase):
@@ -126,10 +132,13 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         """Slots 0-31 go into ac0, ac1 is 0."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.text = ""
         mock_get.return_value = mock_response
 
         data = MagicMock(ac_mode=0, fan_mode=0, temperature_setpoint=24)
-        self.assertTrue(await self.ccm.async_set_state(4, data))
+        self.assertEqual(
+            await self.ccm.async_set_state(4, data), CCM15ReturnCode.OK
+        )
 
         called_url = mock_get.call_args.args[0]
         self.assertIn("ac0=16", called_url)  # 2 ** 4
@@ -140,10 +149,13 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         """Slots 32-63 go into ac1, ac0 is 0."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.text = ""
         mock_get.return_value = mock_response
 
         data = MagicMock(ac_mode=0, fan_mode=0, temperature_setpoint=24)
-        self.assertTrue(await self.ccm.async_set_state(40, data))
+        self.assertEqual(
+            await self.ccm.async_set_state(40, data), CCM15ReturnCode.OK
+        )
 
         called_url = mock_get.call_args.args[0]
         self.assertIn("ac0=0", called_url)
@@ -162,10 +174,13 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         """
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.text = ""
         mock_get.return_value = mock_response
 
         data = MagicMock(ac_mode=1, fan_mode=2, temperature_setpoint=26)
-        self.assertTrue(await self.ccm.async_set_state(0, data))
+        self.assertEqual(
+            await self.ccm.async_set_state(0, data), CCM15ReturnCode.OK
+        )
 
         called_url = mock_get.call_args.args[0]
         self.assertIn("mode=1", called_url)  # HEAT preserved, not reset to COOL
@@ -173,25 +188,36 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         self.assertIn("temp=26", called_url)
 
     @patch("httpx.AsyncClient.get")
-    async def test_set_state_url_includes_password(self, mock_get):
-        """When a password is configured, the ctrl.xml URL carries pwd=."""
+    async def test_set_state_url_obfuscates_password(self, mock_get):
+        """The configured password is XOR-obfuscated on the wire, with a nonce.
+
+        The factory default 123456 must go out as pwd=296393
+        (0x1E240 ^ 0x56789 = 0x485C9 = 296393), matching the controller's own
+        pwdstr(). The user-facing value (123456) must never appear in the URL.
+        """
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.text = ""
         mock_get.return_value = mock_response
 
         device = CCM15Device("localhost", 8000, password="123456")
         data = MagicMock(ac_mode=0, fan_mode=4, temperature_setpoint=22)
-        self.assertTrue(await device.async_set_state(1, data))
+        self.assertEqual(
+            await device.async_set_state(1, data), CCM15ReturnCode.OK
+        )
 
         called_url = mock_get.call_args.args[0]
-        self.assertIn("pwd=123456", called_url)
+        self.assertIn("pwd=296393", called_url)
+        self.assertNotIn("pwd=123456", called_url)  # raw value never sent
+        self.assertIn("utsxxx=", called_url)  # nonce included
         self.assertIn("ac0=2", called_url)  # 2 ** 1
 
     @patch("httpx.AsyncClient.get")
     async def test_set_state_url_omits_password_when_unset(self, mock_get):
-        """Without a password the URL must not include a pwd parameter."""
+        """Without a password the URL must not include pwd or utsxxx."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.text = ""
         mock_get.return_value = mock_response
 
         device = CCM15Device("localhost", 8000)
@@ -200,6 +226,36 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
 
         called_url = mock_get.call_args.args[0]
         self.assertNotIn("pwd=", called_url)
+        self.assertNotIn("utsxxx=", called_url)
+
+    @patch("httpx.AsyncClient.get")
+    async def test_set_state_returns_wrong_password(self, mock_get):
+        """A <ret>250</ret> response maps to CCM15ReturnCode.WRONG_PASSWORD."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = "<response><ret>250</ret></response>"
+        mock_get.return_value = mock_response
+
+        device = CCM15Device("localhost", 8000, password="999999")
+        data = MagicMock(ac_mode=0, fan_mode=0, temperature_setpoint=24)
+        self.assertEqual(
+            await device.async_set_state(0, data),
+            CCM15ReturnCode.WRONG_PASSWORD,
+        )
+
+    @patch("httpx.AsyncClient.get")
+    async def test_set_state_returns_connection_error_on_bad_status(self, mock_get):
+        """A non-OK HTTP status maps to CCM15ReturnCode.CONNECTION_ERROR."""
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.text = ""
+        mock_get.return_value = mock_response
+
+        data = MagicMock(ac_mode=0, fan_mode=0, temperature_setpoint=24)
+        self.assertEqual(
+            await self.ccm.async_set_state(0, data),
+            CCM15ReturnCode.CONNECTION_ERROR,
+        )
 
     async def test_uses_injected_client_when_provided(self) -> None:
         """A client passed to the constructor is reused instead of building a new one."""
@@ -246,6 +302,7 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         """A freshly decoded device has desired_swing UNSET, so no sw is sent."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.text = ""
         mock_get.return_value = mock_response
 
         data = CCM15SlaveDevice(bytes.fromhex("00000001020304"))
@@ -260,6 +317,7 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         """Setting desired_swing=ON emits sw=1."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.text = ""
         mock_get.return_value = mock_response
 
         data = CCM15SlaveDevice(bytes.fromhex("00000001020304"))
@@ -274,6 +332,7 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         """Setting desired_swing=OFF emits sw=0."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.text = ""
         mock_get.return_value = mock_response
 
         data = CCM15SlaveDevice(bytes.fromhex("00000001020304"))
@@ -288,6 +347,7 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         """A freshly decoded device has desired_heater UNSET, so no ht is sent."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.text = ""
         mock_get.return_value = mock_response
 
         data = CCM15SlaveDevice(bytes.fromhex("00000001020304"))
@@ -302,6 +362,7 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         """Setting desired_heater=ON emits ht=1, independent of swing."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.text = ""
         mock_get.return_value = mock_response
 
         data = CCM15SlaveDevice(bytes.fromhex("00000001020304"))
@@ -317,6 +378,7 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         """Setting desired_heater=OFF emits ht=0."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.text = ""
         mock_get.return_value = mock_response
 
         data = CCM15SlaveDevice(bytes.fromhex("00000001020304"))
