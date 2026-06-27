@@ -25,3 +25,16 @@ Homepage = "https://github.com/HomeOps/py-ccm15"
 Repository = "https://github.com/HomeOps/py-ccm15"
 Changelog = "https://github.com/HomeOps/py-ccm15/blob/main/CHANGELOG.md"
 
+[tool.setuptools.packages.find]
+include = ["ccm15*"]
+
+# Ship the PEP 561 marker so downstreams (e.g. Home Assistant's strict-typing
+# quality-scale rule) see the package as typed.
+[tool.setuptools.package-data]
+ccm15 = ["py.typed"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["ccm15"]
+
