@@ -1,6 +1,6 @@
 """Data model to represent state of a CCM15 device."""
 from dataclasses import dataclass
-from . import CCM15SlaveDevice
+from .CCM15SlaveDevice import CCM15SlaveDevice
 
 @dataclass
 class CCM15DeviceState:

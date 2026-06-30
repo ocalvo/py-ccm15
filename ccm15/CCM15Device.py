@@ -24,10 +24,10 @@ from .const import (
 
 
 class CCM15Device:
-    def __init__(self, host: str, port: int, timeout = DEFAULT_TIMEOUT,
-                 state_ttl = DEFAULT_STATE_TTL,
-                 client: "httpx.AsyncClient | None" = None,
-                 password: "str | None" = None):
+    def __init__(self, host: str, port: int, timeout: float = DEFAULT_TIMEOUT,
+                 state_ttl: float = DEFAULT_STATE_TTL,
+                 client: httpx.AsyncClient | None = None,
+                 password: str | None = None) -> None:
         self.host = host
         self.port = port
         self.timeout = timeout
@@ -46,8 +46,8 @@ class CCM15Device:
         # seconds so a transient dropout does not flap every entity to
         # unavailable. Set state_ttl to 0 to disable caching.
         self.state_ttl = state_ttl
-        self._last_state = None
-        self._last_good_monotonic = None
+        self._last_state: CCM15DeviceState | None = None
+        self._last_good_monotonic: float | None = None
         # An httpx.AsyncClient can be passed in to avoid the library
         # constructing one inside an asyncio loop. Constructing an
         # AsyncClient synchronously loads the certifi CA bundle, which
@@ -78,7 +78,7 @@ class CCM15Device:
     async def __aenter__(self) -> "CCM15Device":
         return self
 
-    async def __aexit__(self, *exc_info) -> None:
+    async def __aexit__(self, *exc_info: object) -> None:
         await self.aclose()
 
     async def _fetch_xml_data(self) -> str:
@@ -215,7 +215,9 @@ class CCM15Device:
             return FAN_MODE_AUTO
         return fan_mode
 
-    async def async_set_state(self, ac_index: int, data) -> CCM15ReturnCode:
+    async def async_set_state(
+        self, ac_index: int, data: CCM15SlaveDevice
+    ) -> CCM15ReturnCode:
         """Set new target states.
 
         The controller addresses slaves with a 64-bit mask split across two
