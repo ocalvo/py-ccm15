@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/HomeOps/py-ccm15/compare/v1.0.0...v1.1.0) (2026-06-30)
+
+
+### Features
+
+* add PEP 561 typing support and pass mypy --strict ([#58](https://github.com/HomeOps/py-ccm15/issues/58)) ([6331c0c](https://github.com/HomeOps/py-ccm15/commit/6331c0c739e8fc9c92b12e1f5f0c945713502bb8))
+
+
+### Bug Fixes
+
+* use auto fan for active commands with fan off ([#60](https://github.com/HomeOps/py-ccm15/issues/60)) ([774b59c](https://github.com/HomeOps/py-ccm15/commit/774b59c29a22f5f93aca754e42c0099bd46af09b))
+
 ## [1.0.0](https://github.com/HomeOps/py-ccm15/compare/v0.6.0...v1.0.0) (2026-06-15)
 
 
