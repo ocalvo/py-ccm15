@@ -131,6 +131,10 @@ controller treats every `ctrl.xml` write as the complete desired state**: any
 field that is *not* sent is reset to the firmware's default (which, for mode,
 lands on COOL). A single write must therefore always carry the mode, fan and
 temperature it wants to keep — see the regression behavior in issue #15.
+When the target mode is active but the decoded fan state is `Off`, this library
+sends `fan=Auto` instead; some CCM15 firmwares do not start a unit from an
+active mode command that also carries `fan=Off`. Commands whose target mode is
+`Off` still preserve `fan=Off`.
 
 ```
 http://<host>:<port>/ctrl.xml?[pwd=<obf>&utsxxx=<nonce>&]ac0=<mask>&ac1=<mask>&mode=<m>&fan=<f>&temp=<t>[&sw=<0|1>][&ht=<0|1>]

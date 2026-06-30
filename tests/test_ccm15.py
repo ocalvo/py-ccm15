@@ -188,6 +188,50 @@ class TestCCM15(unittest.IsolatedAsyncioTestCase):
         self.assertIn("temp=26", called_url)
 
     @patch("httpx.AsyncClient.get")
+    async def test_async_set_state_active_mode_uses_auto_fan_when_fan_off(
+        self, mock_get
+    ):
+        """An active mode with fan off is sent with auto fan.
+
+        The controller treats each write as the complete desired state. Some
+        firmwares do not start an active HVAC mode when the same command also
+        carries fan=off, so the library normalizes that wire command to
+        fan=auto.
+        """
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = ""
+        mock_get.return_value = mock_response
+
+        data = MagicMock(ac_mode=0, fan_mode=5, temperature_setpoint=26)
+        self.assertEqual(
+            await self.ccm.async_set_state(0, data), CCM15ReturnCode.OK
+        )
+
+        called_url = mock_get.call_args.args[0]
+        self.assertIn("mode=0", called_url)
+        self.assertIn("fan=0", called_url)
+        self.assertIn("temp=26", called_url)
+        self.assertEqual(data.fan_mode, 5)
+
+    @patch("httpx.AsyncClient.get")
+    async def test_async_set_state_off_mode_preserves_fan_off(self, mock_get):
+        """An off command can still carry fan off."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = ""
+        mock_get.return_value = mock_response
+
+        data = MagicMock(ac_mode=4, fan_mode=5, temperature_setpoint=26)
+        self.assertEqual(
+            await self.ccm.async_set_state(0, data), CCM15ReturnCode.OK
+        )
+
+        called_url = mock_get.call_args.args[0]
+        self.assertIn("mode=4", called_url)
+        self.assertIn("fan=5", called_url)
+
+    @patch("httpx.AsyncClient.get")
     async def test_set_state_url_obfuscates_password(self, mock_get):
         """The configured password is XOR-obfuscated on the wire, with a nonce.
 

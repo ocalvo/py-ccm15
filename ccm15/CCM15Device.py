@@ -8,11 +8,14 @@ from .CCM15ReturnCode import CCM15ReturnCode
 from .CCM15SlaveDevice import CCM15SlaveDevice
 from .TriState import TriState
 from .const import (
+    AC_MODE_OFF,
     BASE_URL,
     CONF_URL_CTRL,
     CONF_URL_STATUS,
     DEFAULT_STATE_TTL,
     DEFAULT_TIMEOUT,
+    FAN_MODE_AUTO,
+    FAN_MODE_OFF,
     PASSWORD_MASK,
     PASSWORD_XOR_KEY,
     RET_PATTERN,
@@ -205,6 +208,13 @@ class CCM15Device:
         utsxxx = int(time.time() * 1000) % UTSXXX_MODULO
         return f"pwd={pwd}&utsxxx={utsxxx}&"
 
+    @staticmethod
+    def _fan_mode_for_command(ac_mode: int, fan_mode: int) -> int:
+        """Return a runnable fan mode for the target HVAC command."""
+        if ac_mode != AC_MODE_OFF and fan_mode == FAN_MODE_OFF:
+            return FAN_MODE_AUTO
+        return fan_mode
+
     async def async_set_state(
         self, ac_index: int, data: CCM15SlaveDevice
     ) -> CCM15ReturnCode:
@@ -226,6 +236,7 @@ class CCM15Device:
             ac0 = 0
             ac1 = 2 ** (ac_index - 32)
         pwd_part = self._password_query()
+        fan_mode = self._fan_mode_for_command(data.ac_mode, data.fan_mode)
         url = BASE_URL.format(
             self.host,
             self.port,
@@ -236,7 +247,7 @@ class CCM15Device:
             + "&ac1="
             + str(ac1)
             + "&mode=" + str(data.ac_mode)
-            +  "&fan=" + str(data.fan_mode)
+            + "&fan=" + str(fan_mode)
             + "&temp=" + str(data.temperature_setpoint)
         )
         # Opt-in swing: only emit `sw` when the caller set a desired value.

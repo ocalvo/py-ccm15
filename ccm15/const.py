@@ -10,6 +10,11 @@ CONF_URL_CTRL = "ctrl.xml"
 DEFAULT_TIMEOUT = 10
 DEFAULT_STATE_TTL = 300
 
+# Mode and fan command codes.
+AC_MODE_OFF = 4
+FAN_MODE_AUTO = 0
+FAN_MODE_OFF = 5
+
 # Password obfuscation, mirroring the controller's own pwdstr() in midea.js.
 # The on-wire `pwd` value is the configured numeric password XORed with a fixed
 # magic key and cast to an unsigned 32-bit integer; a per-request `utsxxx`
